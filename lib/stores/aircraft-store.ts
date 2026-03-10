@@ -82,8 +82,16 @@ export const useAircraftStore = create<AircraftState>((set, get) => ({
             set({ bounds });
         }
 
-        // Initial fetch
-        get().fetchAircraft(bounds);
+        // Set up polling state first
+        set({
+            isPolling: true,
+        });
+
+        // Defer the initial fetch to avoid state updates during render
+        // This prevents "Cannot update a component while rendering a different component" error
+        setTimeout(() => {
+            get().fetchAircraft(bounds);
+        }, 0);
 
         // Set up polling interval
         const intervalId = setInterval(() => {
@@ -91,7 +99,6 @@ export const useAircraftStore = create<AircraftState>((set, get) => ({
         }, intervalMs);
 
         set({
-            isPolling: true,
             pollingIntervalId: intervalId,
         });
     },

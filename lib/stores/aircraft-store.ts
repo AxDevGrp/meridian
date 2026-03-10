@@ -82,24 +82,20 @@ export const useAircraftStore = create<AircraftState>((set, get) => ({
             set({ bounds });
         }
 
-        // Set up polling state first
-        set({
-            isPolling: true,
-        });
-
-        // Defer the initial fetch to avoid state updates during render
-        // This prevents "Cannot update a component while rendering a different component" error
-        setTimeout(() => {
-            get().fetchAircraft(bounds);
-        }, 0);
-
         // Set up polling interval
         const intervalId = setInterval(() => {
             get().fetchAircraft(bounds);
         }, intervalMs);
 
-        set({
-            pollingIntervalId: intervalId,
+        // Defer ALL state updates to avoid React error #185
+        // "Cannot update a component while rendering a different component"
+        queueMicrotask(() => {
+            set({
+                isPolling: true,
+                pollingIntervalId: intervalId,
+            });
+            // Initial fetch also deferred
+            get().fetchAircraft(bounds);
         });
     },
 

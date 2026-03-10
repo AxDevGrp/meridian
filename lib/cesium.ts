@@ -7,11 +7,25 @@ if (typeof window !== "undefined") {
     (window as unknown as { CESIUM_BASE_URL?: string }).CESIUM_BASE_URL = "/cesium";
 }
 
-// Set Cesium Ion default access token from environment variable
-const cesiumIonToken = process.env.NEXT_PUBLIC_CESIUM_ION_TOKEN || "";
+// Track if we've set the token
+let tokenSet = false;
 
-if (cesiumIonToken) {
-    Cesium.Ion.defaultAccessToken = cesiumIonToken;
+/**
+ * Set the Cesium Ion access token
+ * This must be called before creating a viewer
+ */
+function setCesiumIonToken(): void {
+    if (tokenSet) return;
+
+    // Get token from environment variable
+    const cesiumIonToken = process.env.NEXT_PUBLIC_CESIUM_ION_TOKEN || "";
+
+    if (cesiumIonToken) {
+        Cesium.Ion.defaultAccessToken = cesiumIonToken;
+        tokenSet = true;
+    } else {
+        console.warn("Cesium Ion token not set. Set NEXT_PUBLIC_CESIUM_ION_TOKEN environment variable.");
+    }
 }
 
 // Aircraft rendering colors
@@ -38,6 +52,9 @@ export async function createGlobeViewer(
     container: string | HTMLElement,
     options?: Partial<Cesium.Viewer.ConstructorOptions>
 ): Promise<Cesium.Viewer> {
+    // Ensure Cesium Ion token is set before creating viewer
+    setCesiumIonToken();
+
     const viewer = new Cesium.Viewer(container, {
         // Use terrain provider for 3D terrain
         terrain: Cesium.Terrain.fromWorldTerrain(),

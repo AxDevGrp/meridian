@@ -5,21 +5,18 @@ import type { BoundingBox } from "@/lib/types/aircraft";
 
 /**
  * Hook to manage aircraft data polling and state
- * Automatically starts polling when mounted and stops when unmounted
+ * Does NOT auto-start polling by default - call startPolling() manually
  *
  * @param options - Configuration options
- * @param options.autoStart - Whether to automatically start polling (default: true)
  * @param options.intervalMs - Polling interval in milliseconds (default: 15000)
  * @param options.bounds - Optional bounding box for geographic filtering
  * @returns Aircraft data and control functions
  */
 export function useAircraft(options?: {
-    autoStart?: boolean;
     intervalMs?: number;
     bounds?: BoundingBox;
 }) {
     const {
-        autoStart = true,
         intervalMs = POLLING_INTERVALS.RECOMMENDED,
         bounds,
     } = options ?? {};
@@ -38,38 +35,12 @@ export function useAircraft(options?: {
     const setBoundsAction = useAircraftStore((state) => state.setBounds);
     const clearErrorAction = useAircraftStore((state) => state.clearError);
 
-    // Track if we started polling (for cleanup)
-    const didStartPolling = useRef(false);
-    const isInitialized = useRef(false);
-
     // Set bounds when provided
     useEffect(() => {
         if (bounds) {
             setBoundsAction(bounds);
         }
     }, [bounds, setBoundsAction]);
-
-    // Auto-start polling on mount - only run once
-    useEffect(() => {
-        if (isInitialized.current) return;
-        isInitialized.current = true;
-
-        if (autoStart) {
-            didStartPolling.current = true;
-            // Use queueMicrotask to ensure this runs after the current render
-            queueMicrotask(() => {
-                startPollingAction(intervalMs, bounds);
-            });
-        }
-
-        return () => {
-            // Only stop polling if we started it
-            if (didStartPolling.current) {
-                stopPollingAction();
-                didStartPolling.current = false;
-            }
-        };
-    }, [autoStart, intervalMs, bounds, startPollingAction, stopPollingAction]);
 
     // Manual fetch function
     const refetch = useCallback(() => {
@@ -96,7 +67,7 @@ export function useAircraft(options?: {
 
         // Actions
         refetch,
-        startPolling: () => startPollingAction(intervalMs, bounds),
+        startPolling: useCallback(() => startPollingAction(intervalMs, bounds), [intervalMs, bounds, startPollingAction]),
         stopPolling: stopPollingAction,
         clearError: clearErrorAction,
     };

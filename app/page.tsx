@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense } from "react";
+import { Suspense, useEffect } from "react";
 import { GlobeContainer } from "@/components/globe-container";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Sidebar } from "@/components/sidebar";
@@ -9,9 +9,24 @@ import { useAircraft } from "@/lib/hooks/use-aircraft";
 import { useUIStore, useSidebarActions } from "@/lib/stores/ui-store";
 
 function GlobeWithAircraft() {
-  const { aircraft } = useAircraft();
+  const { aircraft, startPolling, stopPolling, isPolling } = useAircraft();
   const selectedEntityId = useUIStore((state) => state.selectedEntityId);
   const { selectEntity, deselectEntity } = useSidebarActions();
+
+  // Start polling on mount, stop on unmount
+  useEffect(() => {
+    // Use a small delay to ensure component is fully mounted
+    const timer = setTimeout(() => {
+      startPolling();
+    }, 100);
+
+    return () => {
+      clearTimeout(timer);
+      if (isPolling) {
+        stopPolling();
+      }
+    };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <>

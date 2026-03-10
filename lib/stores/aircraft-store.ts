@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { useShallow } from "zustand/react/shallow";
 import type { Aircraft, BoundingBox } from "@/lib/types/aircraft";
 import { fetchAircraft, POLLING_INTERVALS } from "@/lib/services/opensky";
 
@@ -125,23 +126,23 @@ export const useAircraftStore = create<AircraftState>((set, get) => ({
 }));
 
 /**
- * Hook to get aircraft data
+ * Hook to get aircraft data (uses useShallow for stable references)
  */
-export const useAircraft = () => useAircraftStore((state) => ({
+export const useAircraft = () => useAircraftStore(useShallow((state) => ({
     aircraft: state.aircraft,
     isLoading: state.isLoading,
     error: state.error,
     lastUpdated: state.lastUpdated,
-}));
+})));
 
 /**
- * Hook to get polling state
+ * Hook to get polling state (uses useShallow for stable references)
  */
-export const useAircraftPolling = () => useAircraftStore((state) => ({
+export const useAircraftPolling = () => useAircraftStore(useShallow((state) => ({
     isPolling: state.isPolling,
     startPolling: state.startPolling,
     stopPolling: state.stopPolling,
-}));
+})));
 
 /**
  * Hook to get aircraft count

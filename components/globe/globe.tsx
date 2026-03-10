@@ -40,7 +40,10 @@ export const Globe = forwardRef<GlobeRef, GlobeProps>(
         const viewerRef = useRef<Cesium.Viewer | null>(null);
         const aircraftCollectionRef = useRef<AircraftPrimitiveCollection | null>(null);
 
-        const { setViewer, setCameraPosition, setIsLoading, setError } = useGlobeStore();
+        const setViewer = useGlobeStore((state) => state.setViewer);
+        const setCameraPosition = useGlobeStore((state) => state.setCameraPosition);
+        const setIsLoading = useGlobeStore((state) => state.setIsLoading);
+        const setError = useGlobeStore((state) => state.setError);
 
         // Initialize viewer
         useEffect(() => {

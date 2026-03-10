@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { useShallow } from "zustand/react/shallow";
 
 /**
  * Entity types that can be selected and inspected in the sidebar
@@ -57,10 +58,10 @@ export const useUIStore = create<UIState>((set) => ({
  * Hook to get selected entity info
  */
 export const useSelectedEntity = () =>
-    useUIStore((state) => ({
+    useUIStore(useShallow((state) => ({
         type: state.selectedEntityType,
         id: state.selectedEntityId,
-    }));
+    })));
 
 /**
  * Hook to check if sidebar is open
@@ -71,9 +72,9 @@ export const useSidebarOpen = () => useUIStore((state) => state.sidebarOpen);
  * Hook for sidebar actions
  */
 export const useSidebarActions = () =>
-    useUIStore((state) => ({
+    useUIStore(useShallow((state) => ({
         selectEntity: state.selectEntity,
         deselectEntity: state.deselectEntity,
         toggleSidebar: state.toggleSidebar,
         closeSidebar: state.closeSidebar,
-    }));
+    })));

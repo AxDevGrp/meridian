@@ -15,10 +15,12 @@ import { ScrollArea } from "@/components/ui/scroll-area";
  * Features a glassmorphic design with smooth slide-in/out animations
  */
 export function Sidebar() {
-    const { selectedEntityType, selectedEntityId, sidebarOpen } = useUIStore();
-    const { deselectEntity } = useSidebarActions();
+    const selectedEntityType = useUIStore((state) => state.selectedEntityType);
+    const selectedEntityId = useUIStore((state) => state.selectedEntityId);
+    const sidebarOpen = useUIStore((state) => state.sidebarOpen);
+    const deselectEntity = useUIStore((state) => state.deselectEntity);
     const aircraft = useAircraftByIcao(selectedEntityId);
-    const { viewer } = useGlobeStore();
+    const viewer = useGlobeStore((state) => state.viewer);
 
     // Handle keyboard close (Escape key)
     useEffect(() => {

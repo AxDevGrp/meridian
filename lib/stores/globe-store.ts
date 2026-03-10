@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { useShallow } from "zustand/react/shallow";
 import * as Cesium from "cesium";
 
 interface CameraPosition {
@@ -65,10 +66,10 @@ export const useViewer = () => useGlobeStore((state) => state.viewer);
  * Hook to get/set the selected entity
  */
 export const useSelectedEntity = () =>
-    useGlobeStore((state) => ({
+    useGlobeStore(useShallow((state) => ({
         selectedEntity: state.selectedEntity,
         setSelectedEntity: state.setSelectedEntity,
-    }));
+    })));
 
 /**
  * Hook to get camera position

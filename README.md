@@ -1,36 +1,152 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Meridian - Geospatial Market Intelligence Platform
+
+Meridian is a geospatial market intelligence platform that provides real-time visualization of global data on an interactive 3D globe. Built with Next.js 15, CesiumJS, and shadcn/ui.
+
+## Features (Phase 1)
+
+- **3D Globe Visualization** - Interactive CesiumJS globe with Google Photorealistic 3D Tiles
+- **Real-time Flight Tracking** - ADS-B aircraft data from OpenSky Network API
+- **Entity Inspection Panel** - Sidebar for viewing detailed aircraft information
+- **Time Display** - Current UTC time and data freshness indicator
+- **Responsive Design** - Modern UI with Tailwind CSS and shadcn/ui components
+
+## Tech Stack
+
+- **Framework**: Next.js 15 with TypeScript
+- **3D Globe**: CesiumJS with Google Photorealistic 3D Tiles
+- **Styling**: Tailwind CSS
+- **UI Components**: shadcn/ui (Radix primitives)
+- **State Management**: Zustand
+- **Data Source**: OpenSky Network API (ADS-B flight data)
 
 ## Getting Started
 
-First, run the development server:
+### Prerequisites
+
+- Node.js 18+ 
+- npm, yarn, pnpm, or bun
+- A Cesium Ion account (free tier available)
+
+### Setup
+
+1. Clone the repository:
+   ```bash
+   git clone <repository-url>
+   cd meridian
+   ```
+
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
+
+3. Create a `.env.local` file with your Cesium Ion token:
+   ```bash
+   cp .env.local.example .env.local
+   ```
+
+4. Get your free Cesium Ion token:
+   - Visit [https://cesium.com/ion/tokens](https://cesium.com/ion/tokens)
+   - Create a free account if needed
+   - Copy your default access token
+   - Paste it in your `.env.local` file
+
+5. Start the development server:
+   ```bash
+   npm run dev
+   ```
+
+6. Open [http://localhost:3000](http://localhost:3000) in your browser
+
+## Environment Variables
+
+| Variable | Description | Required |
+|----------|-------------|----------|
+| `NEXT_PUBLIC_CESIUM_ION_TOKEN` | Cesium Ion access token for 3D Tiles | Yes |
+
+## Deployment
+
+### Deploy to Vercel
+
+The easiest way to deploy Meridian is using [Vercel](https://vercel.com):
+
+1. Push your code to GitHub
+
+2. Import your repository in Vercel:
+   - Go to [vercel.com/new](https://vercel.com/new)
+   - Select your repository
+   - Vercel will auto-detect Next.js settings
+
+3. Add your environment variable:
+   - In the Vercel dashboard, go to Settings → Environment Variables
+   - Add `NEXT_PUBLIC_CESIUM_ION_TOKEN` with your Cesium Ion token
+
+4. Deploy!
+
+### Using Vercel CLI
+
+Alternatively, deploy from the command line:
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+# Install Vercel CLI if needed
+npm i -g vercel
+
+# Deploy
+vercel
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Project Structure
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```
+meridian/
+├── app/                    # Next.js App Router
+│   ├── page.tsx           # Main page
+│   ├── layout.tsx         # Root layout
+│   └── api/aircraft/      # Aircraft API route
+├── components/            # React components
+│   ├── globe/            # CesiumJS globe component
+│   ├── header/           # Header and status bar
+│   ├── sidebar/          # Entity inspection panel
+│   └── ui/               # shadcn/ui components
+├── lib/                   # Utilities and services
+│   ├── cesium.ts         # CesiumJS configuration
+│   ├── hooks/            # Custom React hooks
+│   ├── services/         # API services
+│   ├── stores/           # Zustand stores
+│   └── types/            # TypeScript types
+└── public/               # Static assets
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Development
 
-## Learn More
+```bash
+# Run development server
+npm run dev
 
-To learn more about Next.js, take a look at the following resources:
+# Build for production
+npm run build
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+# Start production server
+npm start
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+# Run linting
+npm run lint
+```
 
-## Deploy on Vercel
+## Future Phases
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+See [plans/meridian-implementation-plan.md](plans/meridian-implementation-plan.md) for the full roadmap including:
+- Phase 2: Maritime & Vessel Tracking
+- Phase 3: Market Data Integration
+- Phase 4: Analytics & Alerting
+- Phase 5: Enterprise Features
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## License
+
+MIT
+
+## Acknowledgments
+
+- [CesiumJS](https://cesium.com/) - 3D geospatial visualization
+- [OpenSky Network](https://opensky-network.org/) - ADS-B flight data
+- [shadcn/ui](https://ui.shadcn.com/) - UI components

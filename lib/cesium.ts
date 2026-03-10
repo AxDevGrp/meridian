@@ -13,18 +13,39 @@ let tokenSet = false;
 /**
  * Set the Cesium Ion access token
  * This must be called before creating a viewer
+ * Tries multiple sources: runtime config, env var, window global
  */
 function setCesiumIonToken(): void {
     if (tokenSet) return;
 
-    // Get token from environment variable
-    const cesiumIonToken = process.env.NEXT_PUBLIC_CESIUM_ION_TOKEN || "";
+    // Try multiple sources for the token
+    // 1. Runtime window config (set by user or runtime)
+    // 2. Build-time env variable
+    // 3. Empty string (will show warning in Cesium)
+    let cesiumIonToken = "";
+
+    if (typeof window !== "undefined") {
+        // Check for runtime config
+        const windowWithConfig = window as unknown as {
+            CESIUM_ION_TOKEN?: string;
+            __NEXT_DATA__?: { props?: { cesiumIonToken?: string } };
+        };
+        cesiumIonToken = windowWithConfig.CESIUM_ION_TOKEN || "";
+    }
+
+    // Fall back to build-time env variable
+    if (!cesiumIonToken) {
+        cesiumIonToken = process.env.NEXT_PUBLIC_CESIUM_ION_TOKEN || "";
+    }
 
     if (cesiumIonToken) {
         Cesium.Ion.defaultAccessToken = cesiumIonToken;
         tokenSet = true;
+        console.log("Cesium Ion token configured successfully");
     } else {
         console.warn("Cesium Ion token not set. Set NEXT_PUBLIC_CESIUM_ION_TOKEN environment variable.");
+        // Set a placeholder to prevent further warnings
+        tokenSet = true;
     }
 }
 

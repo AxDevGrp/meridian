@@ -19,62 +19,74 @@ export function useAircraft(options?: {
     bounds?: BoundingBox;
 }) {
     const {
-        aircraft,
-        isLoading,
-        error,
-        lastUpdated,
-        isPolling,
-        fetchAircraft,
-        startPolling,
-        stopPolling,
-        clearError,
-        setBounds,
-    } = useAircraftStore();
-
-    // Track if we started polling (for cleanup)
-    const didStartPolling = useRef(false);
-
-    const {
         autoStart = true,
         intervalMs = POLLING_INTERVALS.RECOMMENDED,
         bounds,
     } = options ?? {};
 
+    // Use selectors to avoid unnecessary re-renders
+    const aircraft = useAircraftStore((state) => state.aircraft);
+    const isLoading = useAircraftStore((state) => state.isLoading);
+    const error = useAircraftStore((state) => state.error);
+    const lastUpdated = useAircraftStore((state) => state.lastUpdated);
+    const isPolling = useAircraftStore((state) => state.isPolling);
+
+    // Get action references (these don't change)
+    const fetchAircraftAction = useAircraftStore((state) => state.fetchAircraft);
+    const startPollingAction = useAircraftStore((state) => state.startPolling);
+    const stopPollingAction = useAircraftStore((state) => state.stopPolling);
+    const setBoundsAction = useAircraftStore((state) => state.setBounds);
+    const clearErrorAction = useAircraftStore((state) => state.clearError);
+
+    // Track if we started polling (for cleanup)
+    const didStartPolling = useRef(false);
+    const isInitialized = useRef(false);
+
     // Set bounds when provided
     useEffect(() => {
         if (bounds) {
-            setBounds(bounds);
+            setBoundsAction(bounds);
         }
-    }, [bounds, setBounds]);
+    }, [bounds, setBoundsAction]);
 
     // Auto-start polling on mount - only run once
     useEffect(() => {
+        if (isInitialized.current) return;
+        isInitialized.current = true;
+
         if (autoStart) {
             didStartPolling.current = true;
-            startPolling(intervalMs, bounds);
+            // Use queueMicrotask to ensure this runs after the current render
+            queueMicrotask(() => {
+                startPollingAction(intervalMs, bounds);
+            });
         }
 
         return () => {
             // Only stop polling if we started it
             if (didStartPolling.current) {
-                stopPolling();
+                stopPollingAction();
                 didStartPolling.current = false;
             }
         };
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [autoStart, intervalMs]); // Intentionally exclude bounds, startPolling, stopPolling, isPolling
+    }, [autoStart, intervalMs, bounds, startPollingAction, stopPollingAction]);
 
     // Manual fetch function
     const refetch = useCallback(() => {
-        return fetchAircraft(bounds);
-    }, [fetchAircraft, bounds]);
+        return fetchAircraftAction(bounds);
+    }, [fetchAircraftAction, bounds]);
+
+    // Calculate derived values
+    const aircraftCount = aircraft.length;
+    const airborneCount = aircraft.filter(a => !a.onGround).length;
+    const groundedCount = aircraft.filter(a => a.onGround).length;
 
     return {
         // Data
         aircraft,
-        aircraftCount: aircraft.length,
-        airborneCount: aircraft.filter(a => !a.onGround).length,
-        groundedCount: aircraft.filter(a => a.onGround).length,
+        aircraftCount,
+        airborneCount,
+        groundedCount,
 
         // Status
         isLoading,
@@ -84,9 +96,9 @@ export function useAircraft(options?: {
 
         // Actions
         refetch,
-        startPolling: () => startPolling(intervalMs, bounds),
-        stopPolling,
-        clearError,
+        startPolling: () => startPollingAction(intervalMs, bounds),
+        stopPolling: stopPollingAction,
+        clearError: clearErrorAction,
     };
 }
 

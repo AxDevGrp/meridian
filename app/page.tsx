@@ -1,32 +1,39 @@
 "use client";
 
-import { Suspense, useEffect } from "react";
+import { Suspense, useEffect, useRef } from "react";
 import { GlobeContainer } from "@/components/globe-container";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Sidebar } from "@/components/sidebar";
 import { Header } from "@/components/header";
 import { useAircraft } from "@/lib/hooks/use-aircraft";
 import { useUIStore, useSidebarActions } from "@/lib/stores/ui-store";
+import { useAircraftStore } from "@/lib/stores/aircraft-store";
 
 function GlobeWithAircraft() {
-  const { aircraft, startPolling, stopPolling, isPolling } = useAircraft();
+  const aircraft = useAircraftStore((state) => state.aircraft);
   const selectedEntityId = useUIStore((state) => state.selectedEntityId);
   const { selectEntity, deselectEntity } = useSidebarActions();
 
-  // Start polling on mount, stop on unmount
+  // Use refs to ensure we only start polling once
+  const pollingStarted = useRef(false);
+  const startPolling = useAircraftStore((state) => state.startPolling);
+  const stopPolling = useAircraftStore((state) => state.stopPolling);
+
+  // Start polling on mount - only once
   useEffect(() => {
-    // Use a small delay to ensure component is fully mounted
-    const timer = setTimeout(() => {
+    if (pollingStarted.current) return;
+    pollingStarted.current = true;
+
+    // Use requestAnimationFrame to ensure we're outside the render phase
+    const rafId = requestAnimationFrame(() => {
       startPolling();
-    }, 100);
+    });
 
     return () => {
-      clearTimeout(timer);
-      if (isPolling) {
-        stopPolling();
-      }
+      cancelAnimationFrame(rafId);
+      stopPolling();
     };
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [startPolling, stopPolling]);
 
   return (
     <>

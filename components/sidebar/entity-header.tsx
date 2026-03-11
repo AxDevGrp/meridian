@@ -1,6 +1,6 @@
 "use client";
 
-import { X, Plane, Ship, AlertTriangle } from "lucide-react";
+import { X, Plane, Ship, AlertTriangle, Satellite, Radio } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import type { EntityType } from "@/lib/stores/ui-store";
@@ -16,24 +16,41 @@ interface EntityHeaderProps {
     onClose: () => void;
 }
 
-const entityConfig = {
+const entityConfig: Record<EntityType, {
+    label: string;
+    icon: typeof Plane;
+    badgeVariant: "default";
+    badgeClassName: string;
+}> = {
     aircraft: {
         label: "AIRCRAFT",
         icon: Plane,
-        badgeVariant: "default" as const,
-        badgeClassName: "bg-blue-500/20 text-blue-400 border-blue-500/30",
+        badgeVariant: "default",
+        badgeClassName: "bg-emerald-500/20 text-emerald-400 border-emerald-500/30",
     },
     vessel: {
         label: "VESSEL",
         icon: Ship,
-        badgeVariant: "default" as const,
-        badgeClassName: "bg-cyan-500/20 text-cyan-400 border-cyan-500/30",
+        badgeVariant: "default",
+        badgeClassName: "bg-blue-500/20 text-blue-400 border-blue-500/30",
+    },
+    satellite: {
+        label: "SATELLITE",
+        icon: Satellite,
+        badgeVariant: "default",
+        badgeClassName: "bg-purple-500/20 text-purple-400 border-purple-500/30",
     },
     conflict: {
         label: "CONFLICT",
         icon: AlertTriangle,
-        badgeVariant: "default" as const,
+        badgeVariant: "default",
         badgeClassName: "bg-red-500/20 text-red-400 border-red-500/30",
+    },
+    "gps-jamming": {
+        label: "GPS JAMMING",
+        icon: Radio,
+        badgeVariant: "default",
+        badgeClassName: "bg-amber-500/20 text-amber-400 border-amber-500/30",
     },
 };
 

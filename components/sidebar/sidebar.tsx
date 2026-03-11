@@ -5,22 +5,50 @@ import * as Cesium from "cesium";
 import { EntityHeader } from "./entity-header";
 import { EntityDetails } from "./entity-details";
 import { EntityActions } from "./entity-actions";
-import { useUIStore, useSidebarActions } from "@/lib/stores/ui-store";
+import {
+    VesselDetails,
+    SatelliteDetails,
+    ConflictDetails,
+    GPSJammingDetails,
+} from "./entity-details-multi";
+import { useUIStore } from "@/lib/stores/ui-store";
 import { useAircraftByIcao } from "@/lib/stores/aircraft-store";
+import {
+    useVesselByMmsi,
+    useSatelliteByNoradId,
+    useConflictById,
+    useGPSJammingZoneById,
+} from "@/lib/stores/data-store";
 import { useGlobeStore } from "@/lib/stores/globe-store";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
 /**
- * Sidebar panel for inspecting selected entities
- * Features a glassmorphic design with smooth slide-in/out animations
+ * Sidebar panel for inspecting selected entities of any type
+ * Supports: aircraft, vessels, satellites, conflicts, GPS jamming zones
  */
 export function Sidebar() {
     const selectedEntityType = useUIStore((state) => state.selectedEntityType);
     const selectedEntityId = useUIStore((state) => state.selectedEntityId);
     const sidebarOpen = useUIStore((state) => state.sidebarOpen);
     const deselectEntity = useUIStore((state) => state.deselectEntity);
-    const aircraft = useAircraftByIcao(selectedEntityId);
     const viewer = useGlobeStore((state) => state.viewer);
+
+    // Fetch entity data based on type
+    const aircraft = useAircraftByIcao(
+        selectedEntityType === "aircraft" ? selectedEntityId : null
+    );
+    const vessel = useVesselByMmsi(
+        selectedEntityType === "vessel" ? selectedEntityId : null
+    );
+    const satellite = useSatelliteByNoradId(
+        selectedEntityType === "satellite" ? selectedEntityId : null
+    );
+    const conflict = useConflictById(
+        selectedEntityType === "conflict" ? selectedEntityId : null
+    );
+    const gpsJammingZone = useGPSJammingZoneById(
+        selectedEntityType === "gps-jamming" ? selectedEntityId : null
+    );
 
     // Handle keyboard close (Escape key)
     useEffect(() => {
@@ -34,21 +62,46 @@ export function Sidebar() {
         return () => window.removeEventListener("keydown", handleKeyDown);
     }, [sidebarOpen, deselectEntity]);
 
-    // Focus camera on selected aircraft
-    const handleFocusOnMap = useCallback(() => {
-        if (!aircraft || !viewer || !aircraft.latitude || !aircraft.longitude) {
-            return;
+    // Get entity position for camera focus
+    const getEntityPosition = useCallback(() => {
+        if (selectedEntityType === "aircraft" && aircraft) {
+            return aircraft.latitude && aircraft.longitude
+                ? { lng: aircraft.longitude, lat: aircraft.latitude, alt: aircraft.baroAltitude ?? 10000 }
+                : null;
         }
+        if (selectedEntityType === "vessel" && vessel) {
+            return { lng: vessel.longitude, lat: vessel.latitude, alt: 500 };
+        }
+        if (selectedEntityType === "satellite" && satellite) {
+            return {
+                lng: satellite.position.longitude,
+                lat: satellite.position.latitude,
+                alt: satellite.position.altitude * 1000,
+            };
+        }
+        if (selectedEntityType === "conflict" && conflict) {
+            return { lng: conflict.longitude, lat: conflict.latitude, alt: 50000 };
+        }
+        if (selectedEntityType === "gps-jamming" && gpsJammingZone) {
+            return {
+                lng: gpsJammingZone.longitude,
+                lat: gpsJammingZone.latitude,
+                alt: gpsJammingZone.radiusKm * 3000,
+            };
+        }
+        return null;
+    }, [selectedEntityType, aircraft, vessel, satellite, conflict, gpsJammingZone]);
 
-        const altitude = aircraft.baroAltitude ?? 10000; // Default to 10km if no altitude
-        const height = altitude * 3.28084 + 5000; // Convert to feet and add offset
+    // Focus camera on selected entity
+    const handleFocusOnMap = useCallback(() => {
+        if (!viewer) return;
+        const pos = getEntityPosition();
+        if (!pos) return;
+
+        const height = pos.alt * 3.28084 + 5000;
 
         viewer.camera.flyTo({
-            destination: Cesium.Cartesian3.fromDegrees(
-                aircraft.longitude,
-                aircraft.latitude,
-                height
-            ),
+            destination: Cesium.Cartesian3.fromDegrees(pos.lng, pos.lat, height),
             orientation: {
                 heading: Cesium.Math.toRadians(0),
                 pitch: Cesium.Math.toRadians(-45),
@@ -56,23 +109,59 @@ export function Sidebar() {
             },
             duration: 2,
         });
-    }, [aircraft, viewer]);
+    }, [viewer, getEntityPosition]);
 
-    // Don't render if no entity is selected or type doesn't match
-    if (!sidebarOpen || !selectedEntityId || selectedEntityType !== "aircraft") {
+    // Determine if we have entity data
+    const hasEntity =
+        (selectedEntityType === "aircraft" && aircraft) ||
+        (selectedEntityType === "vessel" && vessel) ||
+        (selectedEntityType === "satellite" && satellite) ||
+        (selectedEntityType === "conflict" && conflict) ||
+        (selectedEntityType === "gps-jamming" && gpsJammingZone);
+
+    // Don't render if no entity is selected
+    if (!sidebarOpen || !selectedEntityId || !selectedEntityType || !hasEntity) {
         return null;
     }
 
-    // Don't render if aircraft data is not available
-    if (!aircraft) {
-        return null;
-    }
+    // Get display identifiers based on entity type
+    const getIdentifier = (): { primary: string; secondary?: string } => {
+        switch (selectedEntityType) {
+            case "aircraft":
+                return {
+                    primary: aircraft?.callsign?.trim() || aircraft?.icao24?.toUpperCase() || "Unknown",
+                    secondary: aircraft?.icao24?.toUpperCase(),
+                };
+            case "vessel":
+                return {
+                    primary: vessel?.name || "Unknown Vessel",
+                    secondary: `MMSI: ${vessel?.mmsi}`,
+                };
+            case "satellite":
+                return {
+                    primary: satellite?.name || "Unknown Satellite",
+                    secondary: `NORAD: ${satellite?.noradId}`,
+                };
+            case "conflict":
+                return {
+                    primary: conflict?.location || "Unknown Location",
+                    secondary: conflict?.country,
+                };
+            case "gps-jamming":
+                return {
+                    primary: gpsJammingZone?.name || "Unknown Zone",
+                    secondary: gpsJammingZone?.region,
+                };
+            default:
+                return { primary: "Unknown" };
+        }
+    };
 
-    const identifier = aircraft.callsign?.trim() || aircraft.icao24.toUpperCase();
+    const { primary, secondary } = getIdentifier();
 
     return (
         <>
-            {/* Backdrop for mobile - closes sidebar on tap */}
+            {/* Backdrop for mobile */}
             <div
                 className="fixed inset-0 bg-black/50 z-40 md:hidden transition-opacity duration-300"
                 onClick={deselectEntity}
@@ -82,31 +171,45 @@ export function Sidebar() {
             {/* Sidebar panel */}
             <aside
                 className={`
-          fixed right-0 top-0 bottom-0 z-50
-          w-full sm:w-96
-          bg-black/80 backdrop-blur-xl
-          border-l border-white/10
-          shadow-2xl shadow-black/50
-          transform transition-transform duration-300 ease-out
-          flex flex-col
-          ${sidebarOpen ? "translate-x-0" : "translate-x-full"}
-        `}
+                    fixed right-0 top-0 bottom-0 z-50
+                    w-full sm:w-96
+                    bg-black/80 backdrop-blur-xl
+                    border-l border-white/10
+                    shadow-2xl shadow-black/50
+                    transform transition-transform duration-300 ease-out
+                    flex flex-col
+                    ${sidebarOpen ? "translate-x-0" : "translate-x-full"}
+                `}
                 aria-label="Entity inspection panel"
             >
-                {/* Header with entity type badge and close button */}
+                {/* Header */}
                 <EntityHeader
                     entityType={selectedEntityType}
-                    identifier={identifier}
-                    secondaryId={aircraft.icao24.toUpperCase()}
+                    identifier={primary}
+                    secondaryId={secondary}
                     onClose={deselectEntity}
                 />
 
                 {/* Scrollable content area */}
                 <ScrollArea className="flex-1">
-                    <EntityDetails aircraft={aircraft} />
+                    {selectedEntityType === "aircraft" && aircraft && (
+                        <EntityDetails aircraft={aircraft} />
+                    )}
+                    {selectedEntityType === "vessel" && vessel && (
+                        <VesselDetails vessel={vessel} />
+                    )}
+                    {selectedEntityType === "satellite" && satellite && (
+                        <SatelliteDetails satellite={satellite} />
+                    )}
+                    {selectedEntityType === "conflict" && conflict && (
+                        <ConflictDetails event={conflict} />
+                    )}
+                    {selectedEntityType === "gps-jamming" && gpsJammingZone && (
+                        <GPSJammingDetails zone={gpsJammingZone} />
+                    )}
                 </ScrollArea>
 
-                {/* Action buttons and related entities */}
+                {/* Action buttons */}
                 <EntityActions onFocus={handleFocusOnMap} />
             </aside>
         </>

@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Clock, Plane, PlaneTakeoff, Radio, AlertTriangle, Loader2 } from "lucide-react";
+import { Clock, Plane, PlaneTakeoff, Ship, Satellite, AlertTriangle, Loader2 } from "lucide-react";
 import { useAircraft } from "@/lib/hooks/use-aircraft";
+import { useEntityCounts } from "@/lib/stores/data-store";
 import { cn } from "@/lib/utils";
 
 /**
@@ -116,6 +117,7 @@ function formatUTCTime(date: Date): string {
 export function StatusBar() {
     const { aircraftCount, airborneCount, groundedCount, isLoading, error, lastUpdated, isPolling } =
         useAircraft();
+    const entityCounts = useEntityCounts();
 
     // Current UTC time (updates every second) - null initially to avoid hydration mismatch
     const [currentTime, setCurrentTime] = useState<Date | null>(null);
@@ -190,18 +192,34 @@ export function StatusBar() {
             {/* Divider */}
             <div className="w-px h-4 bg-border/50" />
 
-            {/* Aircraft Counts */}
+            {/* Entity Counts */}
             <div className="flex items-center gap-4">
                 <div className="flex items-center gap-1.5">
                     <PlaneTakeoff className="w-3.5 h-3.5 text-[#00ff88]" />
                     <span className="text-foreground font-medium tabular-nums">{airborneCount}</span>
-                    <span className="text-muted-foreground text-xs">airborne</span>
+                    <span className="text-muted-foreground text-xs">aircraft</span>
                 </div>
-                <div className="flex items-center gap-1.5">
-                    <Plane className="w-3.5 h-3.5 text-[#ffaa00]" />
-                    <span className="text-foreground font-medium tabular-nums">{groundedCount}</span>
-                    <span className="text-muted-foreground text-xs">grounded</span>
-                </div>
+                {entityCounts.vessels > 0 && (
+                    <div className="flex items-center gap-1.5">
+                        <Ship className="w-3.5 h-3.5 text-[#00aaff]" />
+                        <span className="text-foreground font-medium tabular-nums">{entityCounts.vessels}</span>
+                        <span className="text-muted-foreground text-xs">vessels</span>
+                    </div>
+                )}
+                {entityCounts.satellites > 0 && (
+                    <div className="flex items-center gap-1.5">
+                        <Satellite className="w-3.5 h-3.5 text-[#aa88ff]" />
+                        <span className="text-foreground font-medium tabular-nums">{entityCounts.satellites}</span>
+                        <span className="text-muted-foreground text-xs">sats</span>
+                    </div>
+                )}
+                {entityCounts.conflicts > 0 && (
+                    <div className="flex items-center gap-1.5">
+                        <AlertTriangle className="w-3.5 h-3.5 text-[#ff4444]" />
+                        <span className="text-foreground font-medium tabular-nums">{entityCounts.conflicts}</span>
+                        <span className="text-muted-foreground text-xs">events</span>
+                    </div>
+                )}
             </div>
 
             {/* Divider */}

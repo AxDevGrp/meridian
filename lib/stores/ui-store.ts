@@ -1,10 +1,11 @@
 import { create } from "zustand";
 import { useShallow } from "zustand/react/shallow";
+import type { LayerType } from "@/lib/types/geo-event";
 
 /**
  * Entity types that can be selected and inspected in the sidebar
  */
-export type EntityType = "aircraft" | "vessel" | "conflict";
+export type EntityType = LayerType;
 
 interface UIState {
     /** Currently selected entity type */

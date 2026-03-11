@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
-import { AircraftPollingProvider } from "@/components/providers";
+import { AircraftPollingProvider, DataPollingProvider } from "@/components/providers";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -29,7 +29,9 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <AircraftPollingProvider>
-          {children}
+          <DataPollingProvider>
+            {children}
+          </DataPollingProvider>
         </AircraftPollingProvider>
       </body>
     </html>

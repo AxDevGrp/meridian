@@ -1,6 +1,7 @@
 "use client";
 
 import { StatusBar } from "./status-bar";
+import { SignalIndicator } from "./signal-indicator";
 import { AlertBadge } from "@/components/alerts";
 import { Radio, TrendingUp, RotateCcw, FileText, Bell, BarChart3 } from "lucide-react";
 import { useIntelStore } from "@/lib/stores/intel-store";
@@ -94,6 +95,9 @@ export function Header() {
 
                         {/* Actions + Navigation - Right */}
                         <div className="flex items-center gap-1">
+                            {/* Signal indicator — "check engine light" */}
+                            <SignalIndicator />
+
                             {/* Intel Reports button */}
                             <button
                                 onClick={() => useIntelStore.getState().setReportPanelOpen(true)}

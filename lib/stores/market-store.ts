@@ -445,14 +445,22 @@ export const useInstrumentBySymbol = (symbol: string | null) =>
         symbol ? state.instruments.find((i) => i.symbol === symbol) ?? null : null
     );
 
+/** Stable empty array to avoid creating new references */
+const EMPTY_PRICES: import("@/lib/types/market").PricePoint[] = [];
+
 /** Price history for a specific symbol */
-export const usePriceHistory = (symbol: string | null) =>
-    useMarketStore(
-        useShallow((state) => ({
-            prices: symbol ? (state.priceHistory[symbol] ?? []) : [],
-            isLoading: symbol ? (state.isLoadingPrices[symbol] ?? false) : false,
-        }))
+export function usePriceHistory(symbol: string | null) {
+    const priceHistory = useMarketStore((state) => state.priceHistory);
+    const isLoadingPrices = useMarketStore((state) => state.isLoadingPrices);
+
+    return useMemo(
+        () => ({
+            prices: symbol ? (priceHistory[symbol] ?? EMPTY_PRICES) : EMPTY_PRICES,
+            isLoading: symbol ? (isLoadingPrices[symbol] ?? false) : false,
+        }),
+        [symbol, priceHistory, isLoadingPrices],
     );
+}
 
 /** Correlations filtered to a specific region */
 export function useCorrelationsForRegion(region: string | null) {

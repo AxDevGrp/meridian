@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { create } from "zustand";
 import { useShallow } from "zustand/react/shallow";
 import type {
@@ -403,19 +404,30 @@ export const useMarketInstruments = () =>
     );
 
 /** Instruments filtered to the current watchlist */
-export const useWatchlistInstruments = () =>
-    useMarketStore(
-        useShallow((state) => {
-            const symbolSet = new Set(
-                state.watchlist?.items.map((i) => i.symbol) ?? []
-            );
-            return {
-                instruments: state.instruments.filter((i) => symbolSet.has(i.symbol)),
+export function useWatchlistInstruments() {
+    const { instruments, watchlist, isLoadingInstruments, isLoadingWatchlist } =
+        useMarketStore(
+            useShallow((state) => ({
+                instruments: state.instruments,
                 watchlist: state.watchlist,
-                isLoading: state.isLoadingInstruments || state.isLoadingWatchlist,
-            };
-        })
-    );
+                isLoadingInstruments: state.isLoadingInstruments,
+                isLoadingWatchlist: state.isLoadingWatchlist,
+            })),
+        );
+
+    const filteredInstruments = useMemo(() => {
+        const symbolSet = new Set(
+            watchlist?.items.map((i) => i.symbol) ?? [],
+        );
+        return instruments.filter((i) => symbolSet.has(i.symbol));
+    }, [instruments, watchlist]);
+
+    return {
+        instruments: filteredInstruments,
+        watchlist,
+        isLoading: isLoadingInstruments || isLoadingWatchlist,
+    };
+}
 
 /** All correlations with loading state */
 export const useCorrelations = () =>
@@ -443,43 +455,46 @@ export const usePriceHistory = (symbol: string | null) =>
     );
 
 /** Correlations filtered to a specific region */
-export const useCorrelationsForRegion = (region: string | null) =>
-    useMarketStore(
-        useShallow((state) => {
-            if (!region) return { correlations: [] as InstrumentCorrelation[] };
-            const lower = region.toLowerCase();
-            return {
-                correlations: state.correlations.filter((c) =>
-                    c.regionName.toLowerCase().includes(lower)
-                ),
-            };
-        })
-    );
+export function useCorrelationsForRegion(region: string | null) {
+    const correlations = useMarketStore((state) => state.correlations);
+
+    const filtered = useMemo(() => {
+        if (!region) return [] as InstrumentCorrelation[];
+        const lower = region.toLowerCase();
+        return correlations.filter((c) =>
+            c.regionName.toLowerCase().includes(lower),
+        );
+    }, [correlations, region]);
+
+    return { correlations: filtered };
+}
 
 /** Aggregate market statistics */
-export const useMarketStats = () =>
-    useMarketStore(
-        useShallow((state) => {
-            const total = state.instruments.length;
-            const sectors = new Set(
-                state.instruments.map((i) => i.sector).filter(Boolean)
-            ).size;
-            const changes = state.instruments
-                .map((i) => i.changePercent)
-                .filter((c): c is number => c !== null);
-            const avgChange =
-                changes.length > 0
-                    ? Math.round(
-                        (changes.reduce((a, b) => a + b, 0) / changes.length) * 100
-                    ) / 100
-                    : 0;
-            const gainers = state.instruments.filter(
-                (i) => i.direction === "up"
-            ).length;
-            const losers = state.instruments.filter(
-                (i) => i.direction === "down"
-            ).length;
+export function useMarketStats() {
+    const instruments = useMarketStore((state) => state.instruments);
 
-            return { total, sectors, avgChange, gainers, losers };
-        })
-    );
+    return useMemo(() => {
+        const total = instruments.length;
+        const sectors = new Set(
+            instruments.map((i) => i.sector).filter(Boolean),
+        ).size;
+        const changes = instruments
+            .map((i) => i.changePercent)
+            .filter((c): c is number => c !== null);
+        const avgChange =
+            changes.length > 0
+                ? Math.round(
+                    (changes.reduce((a, b) => a + b, 0) / changes.length) *
+                    100,
+                ) / 100
+                : 0;
+        const gainers = instruments.filter(
+            (i) => i.direction === "up",
+        ).length;
+        const losers = instruments.filter(
+            (i) => i.direction === "down",
+        ).length;
+
+        return { total, sectors, avgChange, gainers, losers };
+    }, [instruments]);
+}

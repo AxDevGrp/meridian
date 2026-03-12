@@ -5,6 +5,7 @@
  * Provides filter/sort controls, panel state, and computed getters.
  */
 
+import { useMemo } from "react";
 import { create } from "zustand";
 import { useShallow } from "zustand/react/shallow";
 import type {
@@ -219,18 +220,62 @@ export const useAnalyticsOverview = () =>
         })),
     );
 
-export const useAnomalyList = () =>
-    useAnalyticsStore(
-        useShallow((s) => ({
-            anomalies: s.getFilteredAnomalies(),
-            filter: s.anomalyFilter,
-            severityFilter: s.severityFilter,
-            sortBy: s.sortBy,
-            setFilter: s.setAnomalyFilter,
-            setSeverityFilter: s.setSeverityFilter,
-            setSortBy: s.setSortBy,
-        })),
-    );
+export function useAnomalyList() {
+    const { anomalies, filter, severityFilter, sortBy, setFilter, setSeverityFilter, setSortBy } =
+        useAnalyticsStore(
+            useShallow((s) => ({
+                anomalies: s.anomalies,
+                filter: s.anomalyFilter,
+                severityFilter: s.severityFilter,
+                sortBy: s.sortBy,
+                setFilter: s.setAnomalyFilter,
+                setSeverityFilter: s.setSeverityFilter,
+                setSortBy: s.setSortBy,
+            })),
+        );
+
+    const filteredAnomalies = useMemo(() => {
+        let filtered = [...anomalies];
+
+        if (filter !== "all") {
+            filtered = filtered.filter((a) => a.kind === filter);
+        }
+        if (severityFilter !== "all") {
+            filtered = filtered.filter((a) => a.severity === severityFilter);
+        }
+
+        switch (sortBy) {
+            case "severity":
+                filtered.sort(
+                    (a, b) =>
+                        SEVERITY_ORDER[a.severity] - SEVERITY_ORDER[b.severity],
+                );
+                break;
+            case "time":
+                filtered.sort(
+                    (a, b) =>
+                        new Date(b.detectedAt).getTime() -
+                        new Date(a.detectedAt).getTime(),
+                );
+                break;
+            case "score":
+                filtered.sort((a, b) => b.score - a.score);
+                break;
+        }
+
+        return filtered;
+    }, [anomalies, filter, severityFilter, sortBy]);
+
+    return {
+        anomalies: filteredAnomalies,
+        filter,
+        severityFilter,
+        sortBy,
+        setFilter,
+        setSeverityFilter,
+        setSortBy,
+    };
+}
 
 export const useRiskScores = () =>
     useAnalyticsStore(

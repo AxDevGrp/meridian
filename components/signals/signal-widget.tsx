@@ -1,18 +1,48 @@
 "use client";
 
-import { useEffect, useRef, useMemo, useState } from "react";
-import { useActiveSignals } from "@/lib/stores/signal-store";
-import { SignalCard } from "./signal-card";
+import { useEffect, useMemo, useState, useCallback } from "react";
+import { useActiveSignals, useSignalStore } from "@/lib/stores/signal-store";
 import { confidenceToSeverity } from "@/lib/types/signal";
-import type { SignalSeverity } from "@/lib/types/signal";
-import { Zap, CheckCircle2, AlertTriangle } from "lucide-react";
+import type { SignalSeverity, MarketSignal, MarketTarget } from "@/lib/types/signal";
+import {
+    Zap,
+    CheckCircle2,
+    AlertTriangle,
+    TrendingUp,
+    TrendingDown,
+    ChevronRight,
+} from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 
 // ============================================
+// Types
+// ============================================
+
+/** Aggregated instrument row for the table */
+interface InstrumentRow {
+    symbol: string;
+    name: string;
+    direction: "up" | "down";
+    magnitude: "small" | "moderate" | "large";
+    confidence: number;
+    severity: SignalSeverity;
+    scenarioName: string;
+    signalId: string;
+    reasoning: string;
+}
+
+// ============================================
 // Constants
 // ============================================
+
+const SEVERITY_GLOW: Record<SignalSeverity, string> = {
+    critical: "shadow-[0_0_30px_rgba(239,68,68,0.15)]",
+    high: "shadow-[0_0_20px_rgba(245,158,11,0.1)]",
+    moderate: "shadow-[0_0_15px_rgba(234,179,8,0.08)]",
+    low: "",
+};
 
 const SEVERITY_BADGE_STYLES: Record<SignalSeverity, string> = {
     critical: "bg-red-500/20 text-red-400 border-red-500/30",
@@ -21,12 +51,38 @@ const SEVERITY_BADGE_STYLES: Record<SignalSeverity, string> = {
     low: "bg-emerald-500/20 text-emerald-400 border-emerald-500/30",
 };
 
-const SEVERITY_GLOW: Record<SignalSeverity, string> = {
-    critical: "shadow-[0_0_30px_rgba(239,68,68,0.15)]",
-    high: "shadow-[0_0_20px_rgba(245,158,11,0.1)]",
-    moderate: "shadow-[0_0_15px_rgba(234,179,8,0.08)]",
-    low: "",
-};
+/**
+ * Dot color by direction + magnitude.
+ * Green = bullish (up), Red = bearish (down).
+ * Brightness modulated by magnitude.
+ */
+function getDotColor(direction: "up" | "down", magnitude: string): string {
+    if (direction === "up") {
+        switch (magnitude) {
+            case "large":
+                return "bg-emerald-400";
+            case "moderate":
+                return "bg-emerald-500";
+            default:
+                return "bg-emerald-600";
+        }
+    }
+    switch (magnitude) {
+        case "large":
+            return "bg-red-400";
+        case "moderate":
+            return "bg-red-500";
+        default:
+            return "bg-red-600";
+    }
+}
+
+function getDotGlow(direction: "up" | "down", magnitude: string): string {
+    if (magnitude !== "large") return "";
+    return direction === "up"
+        ? "shadow-[0_0_6px_rgba(52,211,153,0.5)]"
+        : "shadow-[0_0_6px_rgba(248,113,113,0.5)]";
+}
 
 /** Relative time from ISO string */
 function relativeTime(isoStr: string): string {
@@ -41,41 +97,80 @@ function relativeTime(isoStr: string): string {
 }
 
 // ============================================
+// Aggregation Logic
+// ============================================
+
+/**
+ * Aggregate market targets from all active signals.
+ * If the same instrument appears in multiple signals,
+ * keep the one with highest confidence.
+ */
+function aggregateInstruments(signals: MarketSignal[]): InstrumentRow[] {
+    const map = new Map<string, InstrumentRow>();
+
+    for (const signal of signals) {
+        const severity = confidenceToSeverity(signal.confidence);
+        for (const target of signal.marketTargets) {
+            const existing = map.get(target.symbol);
+            if (!existing || signal.confidence > existing.confidence) {
+                map.set(target.symbol, {
+                    symbol: target.symbol,
+                    name: target.name,
+                    direction: target.expectedDirection,
+                    magnitude: target.magnitude,
+                    confidence: signal.confidence,
+                    severity,
+                    scenarioName: signal.playbookName,
+                    signalId: signal.id,
+                    reasoning: target.reasoning,
+                });
+            }
+        }
+    }
+
+    // Sort: large magnitude first, then by confidence descending
+    const MAGNITUDE_ORDER: Record<string, number> = {
+        large: 0,
+        moderate: 1,
+        small: 2,
+    };
+    return Array.from(map.values()).sort(
+        (a, b) =>
+            (MAGNITUDE_ORDER[a.magnitude] ?? 2) -
+            (MAGNITUDE_ORDER[b.magnitude] ?? 2) ||
+            b.confidence - a.confidence,
+    );
+}
+
+// ============================================
 // Component
 // ============================================
 
 /**
  * Market Signals Dashboard — always visible, always expanded, upper-left.
- * This is the "check engine light" for market intelligence.
- * Shows active causal scenario signals prominently.
+ * Table format: each row is an instrument with a green/red status dot.
  */
 export function SignalWidget() {
     const { signals, isEvaluating, lastEvaluatedAt, isSampleData } =
         useActiveSignals();
+    const setSignalPanelOpen = useSignalStore((s) => s.setSignalPanelOpen);
+    const setSelectedSignalId = useSignalStore((s) => s.setSelectedSignalId);
 
-    const prevCountRef = useRef(signals.length);
     const [, setTick] = useState(0);
 
-    // Track count changes for potential future notifications
-    useEffect(() => {
-        prevCountRef.current = signals.length;
-    }, [signals.length]);
-
-    // Highest confidence signal
-    const highestSignal = useMemo(
-        () => (signals.length > 0 ? signals[0] : null),
+    // Aggregate instruments from all signals
+    const instruments = useMemo(
+        () => aggregateInstruments(signals),
         [signals],
     );
 
-    const maxSeverity = useMemo<SignalSeverity>(
-        () =>
-            highestSignal
-                ? confidenceToSeverity(highestSignal.confidence)
-                : "low",
-        [highestSignal],
-    );
+    // Highest confidence signal for severity glow
+    const maxSeverity = useMemo<SignalSeverity>(() => {
+        if (signals.length === 0) return "low";
+        return confidenceToSeverity(signals[0].confidence);
+    }, [signals]);
 
-    // Update relative time every 5s
+    // Tick for relative time
     useEffect(() => {
         if (!lastEvaluatedAt) return;
         const interval = setInterval(() => setTick((t) => t + 1), 5_000);
@@ -88,12 +183,20 @@ export function SignalWidget() {
         [lastEvaluatedAt],
     );
 
+    const handleRowClick = useCallback(
+        (signalId: string) => {
+            setSelectedSignalId(signalId);
+            setSignalPanelOpen(true);
+        },
+        [setSelectedSignalId, setSignalPanelOpen],
+    );
+
     const hasSignals = signals.length > 0;
 
     return (
         <div
             className={cn(
-                "fixed top-[88px] left-4 z-30 w-[340px]",
+                "fixed top-[88px] left-4 z-30 w-[370px]",
                 "rounded-xl border bg-black/92 backdrop-blur-xl",
                 "transition-all duration-300",
                 hasSignals
@@ -144,7 +247,7 @@ export function SignalWidget() {
                         </h2>
                         <p className="text-[10px] text-zinc-500">
                             {hasSignals
-                                ? "Active scenarios detected"
+                                ? `${instruments.length} instruments affected`
                                 : "All scenarios nominal"}
                         </p>
                     </div>
@@ -163,30 +266,149 @@ export function SignalWidget() {
                         </Badge>
                     )}
                     {isSampleData && (
-                        <span className="inline-flex items-center gap-1 rounded-full border border-amber-800/50 bg-amber-950/30 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-amber-400/70">
+                        <span className="inline-flex items-center rounded-full border border-amber-800/50 bg-amber-950/30 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-amber-400/70">
                             Sample
                         </span>
                     )}
                 </div>
             </div>
 
-            {/* ─── Signal Cards ─── */}
+            {/* ─── Instrument Table ─── */}
             {hasSignals ? (
                 <ScrollArea className="max-h-[calc(100vh-220px)]">
-                    <div className="space-y-3 p-3">
-                        {signals.map((signal) => (
-                            <SignalCard key={signal.id} signal={signal} />
+                    {/* Column headers */}
+                    <div className="grid grid-cols-[auto_1fr_auto_auto] items-center gap-x-3 border-b border-white/5 px-4 py-2">
+                        <span className="text-[9px] font-semibold uppercase tracking-widest text-zinc-600">
+                            Status
+                        </span>
+                        <span className="text-[9px] font-semibold uppercase tracking-widest text-zinc-600">
+                            Instrument
+                        </span>
+                        <span className="text-[9px] font-semibold uppercase tracking-widest text-zinc-600">
+                            Impact
+                        </span>
+                        <span className="text-[9px] font-semibold uppercase tracking-widest text-zinc-600">
+                            Scenario
+                        </span>
+                    </div>
+
+                    {/* Rows */}
+                    <div className="divide-y divide-white/5">
+                        {instruments.map((row) => (
+                            <button
+                                key={row.symbol}
+                                type="button"
+                                onClick={() => handleRowClick(row.signalId)}
+                                className="grid w-full grid-cols-[auto_1fr_auto_auto] items-center gap-x-3 px-4 py-2.5 text-left transition-colors hover:bg-white/[0.04]"
+                            >
+                                {/* Status dot */}
+                                <div className="flex items-center justify-center">
+                                    <span
+                                        className={cn(
+                                            "inline-block h-2.5 w-2.5 rounded-full",
+                                            getDotColor(
+                                                row.direction,
+                                                row.magnitude,
+                                            ),
+                                            getDotGlow(
+                                                row.direction,
+                                                row.magnitude,
+                                            ),
+                                            row.magnitude === "large" &&
+                                            "animate-pulse",
+                                        )}
+                                    />
+                                </div>
+
+                                {/* Instrument symbol + name */}
+                                <div className="min-w-0">
+                                    <div className="flex items-center gap-1.5">
+                                        <span className="text-sm font-bold tabular-nums text-zinc-100">
+                                            {row.symbol}
+                                        </span>
+                                        {row.direction === "up" ? (
+                                            <TrendingUp
+                                                size={13}
+                                                className="shrink-0 text-emerald-400"
+                                            />
+                                        ) : (
+                                            <TrendingDown
+                                                size={13}
+                                                className="shrink-0 text-red-400"
+                                            />
+                                        )}
+                                    </div>
+                                    <p className="truncate text-[11px] text-zinc-500">
+                                        {row.name}
+                                    </p>
+                                </div>
+
+                                {/* Magnitude badge */}
+                                <span
+                                    className={cn(
+                                        "rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase",
+                                        row.magnitude === "large" &&
+                                        "bg-red-500/15 text-red-400",
+                                        row.magnitude === "moderate" &&
+                                        "bg-amber-500/15 text-amber-400",
+                                        row.magnitude === "small" &&
+                                        "bg-zinc-500/15 text-zinc-500",
+                                    )}
+                                >
+                                    {row.magnitude}
+                                </span>
+
+                                {/* Scenario link */}
+                                <div className="flex items-center gap-0.5 text-zinc-600">
+                                    <ChevronRight size={12} />
+                                </div>
+                            </button>
                         ))}
                     </div>
 
-                    {signals.length <= 2 && (
-                        <div className="border-t border-white/5 px-4 py-2">
-                            <p className="flex items-center gap-1.5 text-[11px] text-emerald-400/60">
-                                <CheckCircle2 size={12} />
-                                No other scenarios active
-                            </p>
+                    {/* Scenario summary beneath table */}
+                    <div className="border-t border-white/5 px-4 py-2.5">
+                        <p className="mb-1.5 text-[9px] font-semibold uppercase tracking-widest text-zinc-600">
+                            Active Scenarios
+                        </p>
+                        <div className="space-y-1">
+                            {signals.map((signal) => {
+                                const sev = confidenceToSeverity(
+                                    signal.confidence,
+                                );
+                                return (
+                                    <button
+                                        key={signal.id}
+                                        type="button"
+                                        onClick={() =>
+                                            handleRowClick(signal.id)
+                                        }
+                                        className="flex w-full items-center gap-2 rounded px-1.5 py-1 text-left transition-colors hover:bg-white/[0.04]"
+                                    >
+                                        <Badge
+                                            variant="outline"
+                                            className={cn(
+                                                "h-5 px-1.5 text-[10px] font-bold tabular-nums",
+                                                SEVERITY_BADGE_STYLES[sev],
+                                            )}
+                                        >
+                                            {Math.round(
+                                                signal.confidence * 100,
+                                            )}
+                                            %
+                                        </Badge>
+                                        <span className="truncate text-xs text-zinc-400">
+                                            {signal.playbookName}
+                                        </span>
+                                        <ChevronRight
+                                            size={11}
+                                            className="ml-auto shrink-0 text-zinc-700"
+                                        />
+                                    </button>
+                                );
+                            })}
                         </div>
-                    )}
+                    </div>
                 </ScrollArea>
             ) : (
                 <div className="px-4 py-8 text-center">
@@ -198,7 +420,7 @@ export function SignalWidget() {
                         No active signals
                     </p>
                     <p className="mt-1 text-xs text-zinc-600">
-                        18 scenarios being monitored
+                        18 scenarios monitored
                     </p>
                 </div>
             )}

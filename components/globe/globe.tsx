@@ -25,7 +25,10 @@ import {
     getEntityAtPosition,
     type AllLayerCollections,
 } from "@/lib/cesium-layers";
+import { renderRiskHeatMap, clearRiskHeatMap } from "@/lib/cesium-analytics";
 import { useGlobeStore } from "@/lib/stores/globe-store";
+import { useLayerStore } from "@/lib/stores/layer-store";
+import { useAnalyticsStore } from "@/lib/stores/analytics-store";
 import type { Aircraft } from "@/lib/types/aircraft";
 import type { Vessel } from "@/lib/types/vessel";
 import type { Satellite } from "@/lib/types/satellite";
@@ -94,6 +97,7 @@ export const Globe = forwardRef<GlobeRef, GlobeProps>(
         const aircraftCollectionRef = useRef<AircraftPrimitiveCollection | null>(null);
         const layerCollectionsRef = useRef<AllLayerCollections | null>(null);
         const [viewerReady, setViewerReady] = useState(false);
+        const riskHeatMapEntitiesRef = useRef<Map<string, any>>(new Map());
 
         const setViewer = useGlobeStore((state) => state.setViewer);
         const setCameraPosition = useGlobeStore((state) => state.setCameraPosition);
@@ -315,6 +319,24 @@ export const Globe = forwardRef<GlobeRef, GlobeProps>(
                 layerVisibility["gps-jamming"] !== false
             );
         }, [layerVisibility, viewerReady]);
+
+        // Risk heat map overlay
+        const riskHeatMapEnabled = useLayerStore((s) => s.riskHeatMap);
+        const riskScores = useAnalyticsStore((s) => s.riskScores);
+
+        useEffect(() => {
+            if (!viewerReady || !viewerRef.current) return;
+
+            if (riskHeatMapEnabled && riskScores.length > 0) {
+                riskHeatMapEntitiesRef.current = renderRiskHeatMap(
+                    viewerRef.current,
+                    riskScores,
+                    riskHeatMapEntitiesRef.current,
+                );
+            } else {
+                clearRiskHeatMap(viewerRef.current, riskHeatMapEntitiesRef.current);
+            }
+        }, [riskHeatMapEnabled, riskScores, viewerReady]);
 
         // Handle click events (multi-source)
         useEffect(() => {

@@ -13,9 +13,10 @@ import {
     ChevronDown,
     ChevronUp,
     FileText,
+    Activity,
 } from "lucide-react";
 import { useState } from "react";
-import { useLayers, useLayerActions, useEnabledLayerCount } from "@/lib/stores/layer-store";
+import { useLayers, useLayerActions, useEnabledLayerCount, useLayerStore } from "@/lib/stores/layer-store";
 import { useAircraftCount } from "@/lib/stores/aircraft-store";
 import { useEntityCounts } from "@/lib/stores/data-store";
 import { useIntelStore } from "@/lib/stores/intel-store";
@@ -128,6 +129,8 @@ export function LayerPanel() {
     const enabledCount = useEnabledLayerCount();
     const aircraftCount = useAircraftCount();
     const entityCounts = useEntityCounts();
+    const riskHeatMap = useLayerStore((s) => s.riskHeatMap);
+    const toggleRiskHeatMap = useLayerStore((s) => s.toggleRiskHeatMap);
 
     // Map layer IDs to counts
     const countMap: Record<LayerType, number> = {
@@ -194,6 +197,27 @@ export function LayerPanel() {
                                 className="text-[10px] text-muted-foreground/60 hover:text-foreground transition-colors"
                             >
                                 Hide All
+                            </button>
+                        </div>
+
+                        {/* Risk Heat Map toggle */}
+                        <div className="border-t border-white/5 px-3 py-2">
+                            <button
+                                onClick={toggleRiskHeatMap}
+                                className={cn(
+                                    "flex items-center gap-2 w-full px-2 py-1.5 rounded-md text-[10px] font-medium transition-colors",
+                                    riskHeatMap
+                                        ? "text-amber-400 bg-amber-500/10 hover:bg-amber-500/15"
+                                        : "text-muted-foreground/60 hover:text-foreground hover:bg-white/5"
+                                )}
+                            >
+                                <Activity className="w-3 h-3" />
+                                Risk Heat Map
+                                {riskHeatMap && (
+                                    <span className="ml-auto text-[8px] font-bold uppercase tracking-wider text-amber-400/70">
+                                        ON
+                                    </span>
+                                )}
                             </button>
                         </div>
 

@@ -2,9 +2,10 @@
 
 import { StatusBar } from "./status-bar";
 import { AlertBadge } from "@/components/alerts";
-import { Radio, TrendingUp, RotateCcw, FileText, Bell } from "lucide-react";
+import { Radio, TrendingUp, RotateCcw, FileText, Bell, BarChart3 } from "lucide-react";
 import { useIntelStore } from "@/lib/stores/intel-store";
 import { useAlertStore, useUnacknowledgedCount } from "@/lib/stores/alert-store";
+import { useAnalyticsStore, useAnalyticsAnomalyCount } from "@/lib/stores/analytics-store";
 import { cn } from "@/lib/utils";
 
 /**
@@ -75,6 +76,7 @@ function MeridianLogo() {
  */
 export function Header() {
     const unacknowledgedCount = useUnacknowledgedCount();
+    const anomalyCount = useAnalyticsAnomalyCount();
 
     return (
         <header className="absolute top-0 left-0 right-0 z-10">
@@ -103,6 +105,30 @@ export function Header() {
                             >
                                 <FileText className="w-3.5 h-3.5" />
                                 <span className="hidden lg:inline">Intel</span>
+                            </button>
+
+                            {/* Analytics button with anomaly count badge */}
+                            <button
+                                onClick={() => useAnalyticsStore.getState().setAnalyticsPanelOpen(true)}
+                                className={cn(
+                                    "relative flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors",
+                                    "text-muted-foreground hover:text-foreground hover:bg-white/5"
+                                )}
+                                aria-label="Open analytics dashboard"
+                            >
+                                <BarChart3 className="w-3.5 h-3.5" />
+                                <span className="hidden lg:inline">Analytics</span>
+                                {anomalyCount > 0 && (
+                                    <span
+                                        className={cn(
+                                            "absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full",
+                                            "bg-amber-600 px-1 font-mono text-[9px] font-bold text-white",
+                                        )}
+                                    >
+                                        {anomalyCount > 99 ? "99+" : anomalyCount}
+                                        <span className="absolute inset-0 animate-ping rounded-full bg-amber-500 opacity-30" />
+                                    </span>
+                                )}
                             </button>
 
                             {/* Alerts button with badge */}

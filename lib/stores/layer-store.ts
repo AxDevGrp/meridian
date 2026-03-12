@@ -11,6 +11,8 @@ import { DEFAULT_LAYERS } from "@/lib/types/geo-event";
 interface LayerState {
     /** Layer configurations */
     layers: LayerConfig[];
+    /** Risk heat map overlay toggle */
+    riskHeatMap: boolean;
 
     /** Toggle a layer's visibility */
     toggleLayer: (id: LayerType) => void;
@@ -26,10 +28,15 @@ interface LayerState {
     isLayerEnabled: (id: LayerType) => boolean;
     /** Get count of enabled layers */
     getEnabledCount: () => number;
+    /** Toggle the risk heat map overlay */
+    toggleRiskHeatMap: () => void;
+    /** Set the risk heat map overlay state */
+    setRiskHeatMap: (enabled: boolean) => void;
 }
 
 export const useLayerStore = create<LayerState>((set, get) => ({
     layers: DEFAULT_LAYERS,
+    riskHeatMap: false,
 
     toggleLayer: (id) =>
         set((state) => ({
@@ -70,6 +77,12 @@ export const useLayerStore = create<LayerState>((set, get) => ({
     getEnabledCount: () => {
         return get().layers.filter((l) => l.enabled).length;
     },
+
+    toggleRiskHeatMap: () =>
+        set((state) => ({ riskHeatMap: !state.riskHeatMap })),
+
+    setRiskHeatMap: (enabled: boolean) =>
+        set({ riskHeatMap: enabled }),
 }));
 
 /**

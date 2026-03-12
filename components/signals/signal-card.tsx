@@ -1,7 +1,11 @@
 "use client";
 
 import { useCallback, useMemo } from "react";
-import type { MarketSignal, PlaybookCategory, CausalChainStepStatus } from "@/lib/types/signal";
+import type {
+    MarketSignal,
+    PlaybookCategory,
+    CausalChainStepStatus,
+} from "@/lib/types/signal";
 import { confidenceToSeverity, getPlaybookCategoryLabel } from "@/lib/types/signal";
 import { useSignalStore } from "@/lib/stores/signal-store";
 import {
@@ -69,6 +73,7 @@ interface SignalCardProps {
 /**
  * Card component for a single market impact signal.
  * Displays causal chain steps, market targets, and confidence.
+ * Sized for legibility — all text at ≥ 12px.
  */
 export function SignalCard({ signal }: SignalCardProps) {
     const setSignalPanelOpen = useSignalStore((s) => s.setSignalPanelOpen);
@@ -104,25 +109,25 @@ export function SignalCard({ signal }: SignalCardProps) {
     return (
         <div
             className={cn(
-                "rounded-lg border border-white/10 bg-white/5 p-3",
-                "border-l-2 transition-colors hover:bg-white/[0.07]",
+                "rounded-lg border border-white/10 bg-white/5 p-4",
+                "border-l-[3px] transition-colors hover:bg-white/[0.07]",
                 SEVERITY_LEFT_BORDER[severity],
             )}
         >
             {/* Header: confidence badge + category + acknowledge */}
-            <div className="mb-2 flex items-center justify-between">
-                <div className="flex items-center gap-2">
+            <div className="mb-2.5 flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
                     <Badge
                         variant="outline"
                         className={cn(
-                            "text-[10px] font-bold tabular-nums",
+                            "h-6 px-2 text-xs font-bold tabular-nums",
                             SEVERITY_BADGE[severity],
                         )}
                     >
                         {confidencePercent}
                     </Badge>
-                    <span className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider text-zinc-500">
-                        <CategoryIcon size={11} />
+                    <span className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-zinc-500">
+                        <CategoryIcon size={14} />
                         {categoryLabel}
                     </span>
                 </div>
@@ -130,34 +135,37 @@ export function SignalCard({ signal }: SignalCardProps) {
                     <button
                         type="button"
                         onClick={handleAcknowledge}
-                        className="flex h-5 w-5 items-center justify-center rounded text-zinc-600 transition-colors hover:bg-white/10 hover:text-emerald-400"
+                        className="flex h-6 w-6 items-center justify-center rounded text-zinc-600 transition-colors hover:bg-white/10 hover:text-emerald-400"
                         title="Acknowledge signal"
                     >
-                        <Check size={12} />
+                        <Check size={14} />
                     </button>
                 )}
             </div>
 
             {/* Title */}
-            <p className="mb-2 text-sm font-bold text-zinc-200">
+            <p className="mb-3 text-sm font-bold leading-snug text-zinc-200">
                 {signal.playbookName}
             </p>
 
             {/* Causal chain */}
-            <div className="mb-2 space-y-0">
+            <div className="mb-3 space-y-0">
                 {signal.causalChain.map((step, idx) => {
                     const config = STEP_STATUS_CONFIG[step.status];
                     const StepIcon = config.icon;
                     return (
                         <div key={step.order}>
-                            <div className="flex items-start gap-1.5">
+                            <div className="flex items-start gap-2">
                                 <StepIcon
-                                    size={12}
-                                    className={cn("mt-0.5 shrink-0", config.color)}
+                                    size={14}
+                                    className={cn(
+                                        "mt-0.5 shrink-0",
+                                        config.color,
+                                    )}
                                 />
                                 <span
                                     className={cn(
-                                        "truncate text-[11px] leading-tight",
+                                        "text-xs leading-snug",
                                         step.status === "pending"
                                             ? "text-zinc-600"
                                             : "text-zinc-400",
@@ -167,7 +175,7 @@ export function SignalCard({ signal }: SignalCardProps) {
                                 </span>
                             </div>
                             {idx < signal.causalChain.length - 1 && (
-                                <div className="ml-[5px] text-[10px] leading-tight text-zinc-700">
+                                <div className="ml-[6px] text-xs leading-tight text-zinc-700">
                                     ↓
                                 </div>
                             )}
@@ -177,16 +185,16 @@ export function SignalCard({ signal }: SignalCardProps) {
             </div>
 
             {/* Market targets */}
-            <div className="mb-2">
-                <span className="text-[9px] font-semibold uppercase tracking-widest text-zinc-600">
+            <div className="mb-3">
+                <span className="text-[10px] font-semibold uppercase tracking-widest text-zinc-600">
                     Expect:
                 </span>
-                <div className="mt-0.5 flex flex-wrap gap-1.5">
+                <div className="mt-1 flex flex-wrap gap-2">
                     {signal.marketTargets.map((target) => (
                         <span
                             key={target.symbol}
                             className={cn(
-                                "flex items-center gap-0.5 text-[11px] font-medium",
+                                "flex items-center gap-1 text-xs font-semibold",
                                 target.expectedDirection === "up"
                                     ? "text-emerald-400"
                                     : "text-red-400",
@@ -194,9 +202,9 @@ export function SignalCard({ signal }: SignalCardProps) {
                         >
                             {target.symbol}
                             {target.expectedDirection === "up" ? (
-                                <TrendingUp size={10} />
+                                <TrendingUp size={14} />
                             ) : (
-                                <TrendingDown size={10} />
+                                <TrendingDown size={14} />
                             )}
                         </span>
                     ))}
@@ -205,18 +213,18 @@ export function SignalCard({ signal }: SignalCardProps) {
 
             {/* Footer: time horizon + view analysis */}
             <div className="flex items-center justify-between">
-                <span className="flex items-center gap-1 text-[10px] text-zinc-600">
-                    <Clock size={10} />
+                <span className="flex items-center gap-1.5 text-[11px] text-zinc-500">
+                    <Clock size={12} />
                     {signal.timeHorizon}
                 </span>
                 <Button
                     variant="ghost"
                     size="sm"
                     onClick={handleViewAnalysis}
-                    className="h-5 px-1.5 text-[10px] text-zinc-500 hover:text-white"
+                    className="h-6 px-2 text-[11px] text-zinc-500 hover:text-white"
                 >
                     View Analysis
-                    <ChevronRight size={10} className="ml-0.5" />
+                    <ChevronRight size={12} className="ml-0.5" />
                 </Button>
             </div>
         </div>

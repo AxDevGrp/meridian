@@ -6,6 +6,10 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Sidebar } from "@/components/sidebar";
 import { Header } from "@/components/header";
 import { LayerPanel } from "@/components/layers";
+import { IntelFeed } from "@/components/intel-feed";
+import { MarketTicker } from "@/components/market";
+import { IntelPanel } from "@/components/intel";
+import { AlertPanel, AlertToastContainer } from "@/components/alerts";
 import { useAircraftStore } from "@/lib/stores/aircraft-store";
 import { useDataStore } from "@/lib/stores/data-store";
 import { useUIStore, useSidebarActions } from "@/lib/stores/ui-store";
@@ -21,6 +25,7 @@ function GlobeWithAllData() {
   const satellites = useDataStore((state) => state.satellites.data);
   const conflicts = useDataStore((state) => state.conflicts.data);
   const gpsJammingZones = useDataStore((state) => state.gpsJamming.data);
+  const socialPosts = useDataStore((state) => state.socialFeed.data);
 
   // UI state
   const selectedEntityId = useUIStore((state) => state.selectedEntityId);
@@ -36,6 +41,7 @@ function GlobeWithAllData() {
       satellite: true,
       conflict: true,
       "gps-jamming": true,
+      social: true,
     };
     for (const layer of layers) {
       visibility[layer.id] = layer.enabled;
@@ -60,6 +66,7 @@ function GlobeWithAllData() {
         satellites={satellites}
         conflicts={conflicts}
         gpsJammingZones={gpsJammingZones}
+        socialPosts={socialPosts}
         layerVisibility={layerVisibility}
         selectedEntityId={selectedEntityId}
         selectedEntityLayer={selectedEntityType}
@@ -73,6 +80,11 @@ function GlobeWithAllData() {
       />
       <Sidebar />
       <LayerPanel />
+      <MarketTicker />
+      <IntelFeed />
+      <IntelPanel />
+      <AlertPanel />
+      <AlertToastContainer />
     </>
   );
 }

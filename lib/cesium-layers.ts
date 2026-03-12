@@ -12,6 +12,7 @@ import type { Vessel } from "@/lib/types/vessel";
 import type { Satellite } from "@/lib/types/satellite";
 import type { ConflictEvent } from "@/lib/types/conflict";
 import type { GPSJammingZone } from "@/lib/types/gps-jamming";
+import type { SocialPost } from "@/lib/types/social-post";
 import { getVesselColor } from "@/lib/types/vessel";
 import { getSatelliteColor, classifySatellitePurpose } from "@/lib/types/satellite";
 import { getConflictColor } from "@/lib/types/conflict";
@@ -484,4 +485,33 @@ export function clearAllCollections(viewer: Cesium.Viewer, collections: AllLayer
         viewer.entities.remove(entity);
     }
     collections.gpsJamming.entities.clear();
+}
+
+// ============================================
+// Social Post Globe Markers (Skeleton)
+// ============================================
+
+/**
+ * Render social post markers on the globe.
+ * Currently a skeleton — the sample data posts don't have lat/lng coordinates yet.
+ * Once geocoding is added (NLP phase), posts with geoReferences will get coordinates
+ * and this function will render billboard markers colored by platform.
+ *
+ * For now, this handles visibility toggling and is a placeholder for future rendering.
+ */
+export function renderSocialPosts(
+    _viewer: Cesium.Viewer,
+    _posts: SocialPost[],
+    _visible: boolean
+): void {
+    // Placeholder: social posts don't have coordinates yet.
+    // When geocoded lat/lng is available on SocialPost, this function will:
+    // 1. Clear existing social markers
+    // 2. If !visible, return early
+    // 3. For each post with coordinates, add a billboard entity:
+    //    - Icon: newspaper/speech-bubble style
+    //    - Color: getPlatformColor(post.platform)
+    //    - ID: `social:${post.id}`
+    //    - Label: post.author
+    // 4. Store references for click detection
 }

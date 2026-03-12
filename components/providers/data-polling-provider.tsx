@@ -15,11 +15,12 @@ export function DataPollingProvider({ children }: { children: React.ReactNode })
 
     useEffect(() => {
         // Map layer IDs to store source names
-        const layerToSource: Record<string, "vessels" | "satellites" | "conflicts" | "gpsJamming"> = {
+        const layerToSource: Record<string, "vessels" | "satellites" | "conflicts" | "gpsJamming" | "socialFeed"> = {
             vessel: "vessels",
             satellite: "satellites",
             conflict: "conflicts",
             "gps-jamming": "gpsJamming",
+            social: "socialFeed",
         };
 
         for (const layer of layers) {

@@ -6,7 +6,7 @@
 /**
  * Supported data source layer types
  */
-export type LayerType = "aircraft" | "vessel" | "satellite" | "conflict" | "gps-jamming";
+export type LayerType = "aircraft" | "vessel" | "satellite" | "conflict" | "gps-jamming" | "social";
 
 /**
  * Severity levels for events (used for conflict events, GPS jamming, etc.)
@@ -212,5 +212,14 @@ export const DEFAULT_LAYERS: LayerConfig[] = [
         color: "#ffaa00",
         enabled: true,
         pollingInterval: 600_000,
+    },
+    {
+        id: "social",
+        name: "Social / News",
+        description: "Social media posts and government announcements",
+        icon: "Newspaper",
+        color: "#ff6600",
+        enabled: true,
+        pollingInterval: 120_000,
     },
 ];

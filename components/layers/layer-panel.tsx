@@ -6,16 +6,19 @@ import {
     Satellite,
     AlertTriangle,
     Radio,
+    Newspaper,
     Layers,
     Eye,
     EyeOff,
     ChevronDown,
     ChevronUp,
+    FileText,
 } from "lucide-react";
 import { useState } from "react";
 import { useLayers, useLayerActions, useEnabledLayerCount } from "@/lib/stores/layer-store";
 import { useAircraftCount } from "@/lib/stores/aircraft-store";
 import { useEntityCounts } from "@/lib/stores/data-store";
+import { useIntelStore } from "@/lib/stores/intel-store";
 import type { LayerType } from "@/lib/types/geo-event";
 import { cn } from "@/lib/utils";
 
@@ -28,6 +31,7 @@ const LAYER_ICONS: Record<LayerType, React.ComponentType<{ className?: string }>
     satellite: Satellite,
     conflict: AlertTriangle,
     "gps-jamming": Radio,
+    social: Newspaper,
 };
 
 /**
@@ -132,6 +136,7 @@ export function LayerPanel() {
         satellite: entityCounts.satellites,
         conflict: entityCounts.conflicts,
         "gps-jamming": entityCounts.gpsJamming,
+        social: entityCounts.socialFeed ?? 0,
     };
 
     return (
@@ -189,6 +194,20 @@ export function LayerPanel() {
                                 className="text-[10px] text-muted-foreground/60 hover:text-foreground transition-colors"
                             >
                                 Hide All
+                            </button>
+                        </div>
+
+                        {/* Generate Report quick action */}
+                        <div className="border-t border-white/5 px-3 py-2">
+                            <button
+                                onClick={() => useIntelStore.getState().setReportPanelOpen(true)}
+                                className={cn(
+                                    "flex items-center gap-2 w-full px-2 py-1.5 rounded-md text-[10px] font-medium transition-colors",
+                                    "text-primary/70 hover:text-primary hover:bg-primary/5"
+                                )}
+                            >
+                                <FileText className="w-3 h-3" />
+                                Generate Intel Report
                             </button>
                         </div>
                     </>

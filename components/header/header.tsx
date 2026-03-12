@@ -1,7 +1,10 @@
 "use client";
 
 import { StatusBar } from "./status-bar";
-import { Radio, TrendingUp, RotateCcw } from "lucide-react";
+import { AlertBadge } from "@/components/alerts";
+import { Radio, TrendingUp, RotateCcw, FileText, Bell } from "lucide-react";
+import { useIntelStore } from "@/lib/stores/intel-store";
+import { useAlertStore, useUnacknowledgedCount } from "@/lib/stores/alert-store";
 import { cn } from "@/lib/utils";
 
 /**
@@ -71,6 +74,8 @@ function MeridianLogo() {
  * Main application header with branding, status bar, and navigation
  */
 export function Header() {
+    const unacknowledgedCount = useUnacknowledgedCount();
+
     return (
         <header className="absolute top-0 left-0 right-0 z-10">
             {/* Glassmorphic background */}
@@ -85,12 +90,55 @@ export function Header() {
                             <StatusBar />
                         </div>
 
-                        {/* Navigation - Right */}
-                        <nav className="flex items-center gap-1">
-                            <NavItem icon={Radio} label="Signals" />
-                            <NavItem icon={TrendingUp} label="Markets" />
-                            <NavItem icon={RotateCcw} label="Replay" />
-                        </nav>
+                        {/* Actions + Navigation - Right */}
+                        <div className="flex items-center gap-1">
+                            {/* Intel Reports button */}
+                            <button
+                                onClick={() => useIntelStore.getState().setReportPanelOpen(true)}
+                                className={cn(
+                                    "flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors",
+                                    "text-muted-foreground hover:text-foreground hover:bg-white/5"
+                                )}
+                                aria-label="Open intelligence reports"
+                            >
+                                <FileText className="w-3.5 h-3.5" />
+                                <span className="hidden lg:inline">Intel</span>
+                            </button>
+
+                            {/* Alerts button with badge */}
+                            <button
+                                onClick={() => useAlertStore.getState().setAlertPanelOpen(true)}
+                                className={cn(
+                                    "relative flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors",
+                                    "text-muted-foreground hover:text-foreground hover:bg-white/5"
+                                )}
+                                aria-label="Open alerts"
+                            >
+                                <Bell className="w-3.5 h-3.5" />
+                                <span className="hidden lg:inline">Alerts</span>
+                                {unacknowledgedCount > 0 && (
+                                    <span
+                                        className={cn(
+                                            "absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full",
+                                            "bg-red-600 px-1 font-mono text-[9px] font-bold text-white",
+                                        )}
+                                    >
+                                        {unacknowledgedCount > 99 ? "99+" : unacknowledgedCount}
+                                        <span className="absolute inset-0 animate-ping rounded-full bg-red-500 opacity-30" />
+                                    </span>
+                                )}
+                            </button>
+
+                            {/* Divider */}
+                            <div className="w-px h-5 bg-border/30 mx-1" />
+
+                            {/* Navigation */}
+                            <nav className="flex items-center gap-1">
+                                <NavItem icon={Radio} label="Signals" />
+                                <NavItem icon={TrendingUp} label="Markets" />
+                                <NavItem icon={RotateCcw} label="Replay" />
+                            </nav>
+                        </div>
                     </div>
                 </div>
             </div>

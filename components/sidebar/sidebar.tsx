@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useCallback } from "react";
+import { useEffect, useCallback, useMemo } from "react";
 import * as Cesium from "cesium";
+import { FileText } from "lucide-react";
 import { EntityHeader } from "./entity-header";
 import { EntityDetails } from "./entity-details";
 import { EntityActions } from "./entity-actions";
@@ -11,6 +12,8 @@ import {
     ConflictDetails,
     GPSJammingDetails,
 } from "./entity-details-multi";
+import { SocialPostDetails } from "./social-post-details";
+import { RelatedInstruments } from "./related-instruments";
 import { useUIStore } from "@/lib/stores/ui-store";
 import { useAircraftByIcao } from "@/lib/stores/aircraft-store";
 import {
@@ -18,8 +21,10 @@ import {
     useSatelliteByNoradId,
     useConflictById,
     useGPSJammingZoneById,
+    useSocialPostById,
 } from "@/lib/stores/data-store";
 import { useGlobeStore } from "@/lib/stores/globe-store";
+import { useIntelStore } from "@/lib/stores/intel-store";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
 /**
@@ -48,6 +53,9 @@ export function Sidebar() {
     );
     const gpsJammingZone = useGPSJammingZoneById(
         selectedEntityType === "gps-jamming" ? selectedEntityId : null
+    );
+    const socialPost = useSocialPostById(
+        selectedEntityType === "social" ? selectedEntityId : null
     );
 
     // Handle keyboard close (Escape key)
@@ -89,8 +97,12 @@ export function Sidebar() {
                 alt: gpsJammingZone.radiusKm * 3000,
             };
         }
+        // Social posts don't have coordinates yet (pending geocoding)
+        if (selectedEntityType === "social") {
+            return null;
+        }
         return null;
-    }, [selectedEntityType, aircraft, vessel, satellite, conflict, gpsJammingZone]);
+    }, [selectedEntityType, aircraft, vessel, satellite, conflict, gpsJammingZone, socialPost]);
 
     // Focus camera on selected entity
     const handleFocusOnMap = useCallback(() => {
@@ -111,13 +123,43 @@ export function Sidebar() {
         });
     }, [viewer, getEntityPosition]);
 
+    // Compute entity location + region for market correlation
+    const entityMarketInfo = useMemo(() => {
+        if (selectedEntityType === "conflict" && conflict) {
+            return {
+                entityType: "conflict",
+                entitySeverity: "high", // conflicts default to high
+                entityLocation: { lat: conflict.latitude, lng: conflict.longitude },
+                regionName: conflict.country,
+            };
+        }
+        if (selectedEntityType === "gps-jamming" && gpsJammingZone) {
+            return {
+                entityType: "gps-jamming",
+                entitySeverity: gpsJammingZone.severity ?? "medium",
+                entityLocation: { lat: gpsJammingZone.latitude, lng: gpsJammingZone.longitude },
+                regionName: gpsJammingZone.region,
+            };
+        }
+        if (selectedEntityType === "vessel" && vessel) {
+            return {
+                entityType: "vessel",
+                entitySeverity: "medium",
+                entityLocation: { lat: vessel.latitude, lng: vessel.longitude },
+                regionName: undefined,
+            };
+        }
+        return null;
+    }, [selectedEntityType, conflict, gpsJammingZone, vessel]);
+
     // Determine if we have entity data
     const hasEntity =
         (selectedEntityType === "aircraft" && aircraft) ||
         (selectedEntityType === "vessel" && vessel) ||
         (selectedEntityType === "satellite" && satellite) ||
         (selectedEntityType === "conflict" && conflict) ||
-        (selectedEntityType === "gps-jamming" && gpsJammingZone);
+        (selectedEntityType === "gps-jamming" && gpsJammingZone) ||
+        (selectedEntityType === "social" && socialPost);
 
     // Don't render if no entity is selected
     if (!sidebarOpen || !selectedEntityId || !selectedEntityType || !hasEntity) {
@@ -151,6 +193,11 @@ export function Sidebar() {
                 return {
                     primary: gpsJammingZone?.name || "Unknown Zone",
                     secondary: gpsJammingZone?.region,
+                };
+            case "social":
+                return {
+                    primary: socialPost?.author || "Unknown Author",
+                    secondary: socialPost?.platform ? socialPost.platform.toUpperCase() : undefined,
                 };
             default:
                 return { primary: "Unknown" };
@@ -206,6 +253,32 @@ export function Sidebar() {
                     )}
                     {selectedEntityType === "gps-jamming" && gpsJammingZone && (
                         <GPSJammingDetails zone={gpsJammingZone} />
+                    )}
+                    {selectedEntityType === "social" && socialPost && (
+                        <SocialPostDetails post={socialPost} />
+                    )}
+
+                    {/* Market correlation section for geo-entities */}
+                    {entityMarketInfo && (
+                        <RelatedInstruments
+                            entityType={entityMarketInfo.entityType}
+                            entitySeverity={entityMarketInfo.entitySeverity}
+                            entityLocation={entityMarketInfo.entityLocation}
+                            regionName={entityMarketInfo.regionName}
+                        />
+                    )}
+
+                    {/* Generate Region Report — shown for conflicts and GPS jamming zones */}
+                    {(selectedEntityType === "conflict" || selectedEntityType === "gps-jamming") && (
+                        <div className="px-4 py-3 border-t border-white/5">
+                            <button
+                                onClick={() => useIntelStore.getState().setReportPanelOpen(true)}
+                                className="flex items-center gap-2 w-full px-3 py-2 rounded-lg text-xs font-medium text-primary/80 hover:text-primary bg-primary/5 hover:bg-primary/10 transition-colors"
+                            >
+                                <FileText className="w-3.5 h-3.5" />
+                                Generate Region Report
+                            </button>
+                        </div>
                     )}
                 </ScrollArea>
 

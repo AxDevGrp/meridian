@@ -1,6 +1,6 @@
 "use client";
 
-import { X, Plane, Ship, AlertTriangle, Satellite, Radio } from "lucide-react";
+import { X, Plane, Ship, AlertTriangle, Satellite, Radio, Newspaper } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import type { EntityType } from "@/lib/stores/ui-store";
@@ -51,6 +51,12 @@ const entityConfig: Record<EntityType, {
         icon: Radio,
         badgeVariant: "default",
         badgeClassName: "bg-amber-500/20 text-amber-400 border-amber-500/30",
+    },
+    social: {
+        label: "SOCIAL / NEWS",
+        icon: Newspaper,
+        badgeVariant: "default",
+        badgeClassName: "bg-orange-500/20 text-orange-400 border-orange-500/30",
     },
 };
 

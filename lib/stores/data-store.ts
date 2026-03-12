@@ -4,10 +4,12 @@ import type { Vessel } from "@/lib/types/vessel";
 import type { Satellite } from "@/lib/types/satellite";
 import type { ConflictEvent } from "@/lib/types/conflict";
 import type { GPSJammingZone } from "@/lib/types/gps-jamming";
+import type { SocialPost } from "@/lib/types/social-post";
 import { fetchVessels, VESSEL_POLLING } from "@/lib/services/vessels";
 import { fetchMultipleSatelliteGroups, SATELLITE_POLLING } from "@/lib/services/satellites";
 import { fetchConflicts, CONFLICT_POLLING } from "@/lib/services/conflicts";
 import { fetchGPSJammingZones, GPS_JAMMING_POLLING } from "@/lib/services/gps-jamming";
+import { fetchSocialFeed, SOCIAL_FEED_POLLING } from "@/lib/services/social-feed";
 
 /**
  * Unified data store for all non-aircraft data sources
@@ -28,6 +30,7 @@ interface DataState {
     satellites: SourceState<Satellite>;
     conflicts: SourceState<ConflictEvent>;
     gpsJamming: SourceState<GPSJammingZone>;
+    socialFeed: SourceState<SocialPost>;
 
     // Polling state
     pollingIntervals: Record<string, ReturnType<typeof setInterval> | null>;
@@ -37,11 +40,12 @@ interface DataState {
     fetchSatellites: () => Promise<void>;
     fetchConflicts: () => Promise<void>;
     fetchGPSJamming: () => Promise<void>;
+    fetchSocialFeed: () => Promise<void>;
     fetchAll: () => Promise<void>;
 
     // Actions - Polling
-    startPolling: (source: "vessels" | "satellites" | "conflicts" | "gpsJamming") => void;
-    stopPolling: (source: "vessels" | "satellites" | "conflicts" | "gpsJamming") => void;
+    startPolling: (source: "vessels" | "satellites" | "conflicts" | "gpsJamming" | "socialFeed") => void;
+    stopPolling: (source: "vessels" | "satellites" | "conflicts" | "gpsJamming" | "socialFeed") => void;
     startAllPolling: () => void;
     stopAllPolling: () => void;
 
@@ -62,6 +66,7 @@ const initialState = {
     satellites: createInitialSourceState<Satellite>(),
     conflicts: createInitialSourceState<ConflictEvent>(),
     gpsJamming: createInitialSourceState<GPSJammingZone>(),
+    socialFeed: createInitialSourceState<SocialPost>(),
     pollingIntervals: {} as Record<string, ReturnType<typeof setInterval> | null>,
 };
 
@@ -181,6 +186,33 @@ export const useDataStore = create<DataState>((set, get) => ({
         }
     },
 
+    fetchSocialFeed: async () => {
+        set((state) => ({
+            socialFeed: { ...state.socialFeed, isLoading: true, error: null },
+        }));
+
+        try {
+            const result = await fetchSocialFeed({ limit: 50 });
+            set({
+                socialFeed: {
+                    data: result.posts,
+                    isLoading: false,
+                    error: null,
+                    lastUpdated: new Date(),
+                    isSampleData: result.isSampleData,
+                },
+            });
+        } catch (err) {
+            set((state) => ({
+                socialFeed: {
+                    ...state.socialFeed,
+                    isLoading: false,
+                    error: err instanceof Error ? err.message : "Failed to fetch social feed",
+                },
+            }));
+        }
+    },
+
     fetchAll: async () => {
         const state = get();
         await Promise.allSettled([
@@ -188,6 +220,7 @@ export const useDataStore = create<DataState>((set, get) => ({
             state.fetchSatellites(),
             state.fetchConflicts(),
             state.fetchGPSJamming(),
+            state.fetchSocialFeed(),
         ]);
     },
 
@@ -203,6 +236,7 @@ export const useDataStore = create<DataState>((set, get) => ({
             satellites: SATELLITE_POLLING.STANDARD,
             conflicts: CONFLICT_POLLING.STANDARD,
             gpsJamming: GPS_JAMMING_POLLING.STANDARD,
+            socialFeed: SOCIAL_FEED_POLLING.STANDARD,
         };
 
         const fetchFns: Record<string, () => Promise<void>> = {
@@ -210,6 +244,7 @@ export const useDataStore = create<DataState>((set, get) => ({
             satellites: state.fetchSatellites,
             conflicts: state.fetchConflicts,
             gpsJamming: state.fetchGPSJamming,
+            socialFeed: state.fetchSocialFeed,
         };
 
         // Initial fetch
@@ -244,7 +279,7 @@ export const useDataStore = create<DataState>((set, get) => ({
 
     startAllPolling: () => {
         const state = get();
-        (["vessels", "satellites", "conflicts", "gpsJamming"] as const).forEach((source) => {
+        (["vessels", "satellites", "conflicts", "gpsJamming", "socialFeed"] as const).forEach((source) => {
             state.startPolling(source);
         });
     },
@@ -252,7 +287,7 @@ export const useDataStore = create<DataState>((set, get) => ({
     stopAllPolling: () => {
         const state = get();
         Object.entries(state.pollingIntervals).forEach(([source]) => {
-            state.stopPolling(source as "vessels" | "satellites" | "conflicts" | "gpsJamming");
+            state.stopPolling(source as "vessels" | "satellites" | "conflicts" | "gpsJamming" | "socialFeed");
         });
     },
 
@@ -315,6 +350,7 @@ export const useEntityCounts = () =>
             satellites: state.satellites.data.length,
             conflicts: state.conflicts.data.length,
             gpsJamming: state.gpsJamming.data.length,
+            socialFeed: state.socialFeed.data.length,
         }))
     );
 
@@ -340,4 +376,22 @@ export const useConflictById = (eventId: string | null) =>
 export const useGPSJammingZoneById = (zoneId: string | null) =>
     useDataStore((state) =>
         zoneId ? state.gpsJamming.data.find((z) => z.id === zoneId) : undefined
+    );
+
+/** Get social feed data with loading state */
+export const useSocialFeed = () =>
+    useDataStore(
+        useShallow((state) => ({
+            posts: state.socialFeed.data,
+            isLoading: state.socialFeed.isLoading,
+            error: state.socialFeed.error,
+            lastUpdated: state.socialFeed.lastUpdated,
+            isSampleData: state.socialFeed.isSampleData,
+        }))
+    );
+
+/** Get a social post by ID */
+export const useSocialPostById = (postId: string | null) =>
+    useDataStore((state) =>
+        postId ? state.socialFeed.data.find((p) => p.id === postId) : undefined
     );

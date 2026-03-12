@@ -19,6 +19,7 @@ import {
     updateSatellitePositions,
     updateConflictPositions,
     updateGPSJammingZones,
+    renderSocialPosts,
     setPrimitiveLayerVisibility,
     setEntityLayerVisibility,
     getEntityAtPosition,
@@ -30,6 +31,7 @@ import type { Vessel } from "@/lib/types/vessel";
 import type { Satellite } from "@/lib/types/satellite";
 import type { ConflictEvent } from "@/lib/types/conflict";
 import type { GPSJammingZone } from "@/lib/types/gps-jamming";
+import type { SocialPost } from "@/lib/types/social-post";
 import type { LayerType } from "@/lib/types/geo-event";
 import "cesium/Build/Cesium/Widgets/widgets.css";
 
@@ -56,6 +58,8 @@ interface GlobeProps {
     conflicts?: ConflictEvent[];
     /** GPS jamming zone data to render */
     gpsJammingZones?: GPSJammingZone[];
+    /** Social post data to render */
+    socialPosts?: SocialPost[];
     /** Layer visibility state */
     layerVisibility?: Record<LayerType, boolean>;
     /** Selected entity (any layer) */
@@ -77,6 +81,7 @@ export const Globe = forwardRef<GlobeRef, GlobeProps>(
             satellites = [],
             conflicts = [],
             gpsJammingZones = [],
+            socialPosts = [],
             layerVisibility,
             selectedEntityId,
             selectedEntityLayer,
@@ -270,6 +275,14 @@ export const Globe = forwardRef<GlobeRef, GlobeProps>(
                 selectedZoneId
             );
         }, [gpsJammingZones, selectedEntityId, selectedEntityLayer, viewerReady]);
+
+        // Update social post markers (skeleton — no coords yet)
+        useEffect(() => {
+            if (!viewerReady || !viewerRef.current) return;
+
+            const visible = layerVisibility?.social !== false;
+            renderSocialPosts(viewerRef.current, socialPosts, visible);
+        }, [socialPosts, layerVisibility, viewerReady]);
 
         // Update layer visibility
         useEffect(() => {

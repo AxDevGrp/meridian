@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
-import { AircraftPollingProvider, DataPollingProvider } from "@/components/providers";
+import { AircraftPollingProvider, DataPollingProvider, MarketPollingProvider, AlertPollingProvider } from "@/components/providers";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -30,7 +30,11 @@ export default function RootLayout({
       >
         <AircraftPollingProvider>
           <DataPollingProvider>
-            {children}
+            <MarketPollingProvider>
+              <AlertPollingProvider>
+                {children}
+              </AlertPollingProvider>
+            </MarketPollingProvider>
           </DataPollingProvider>
         </AircraftPollingProvider>
       </body>

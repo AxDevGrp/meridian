@@ -4,3 +4,4 @@ export { MarketPollingProvider } from "./market-polling-provider";
 export { AlertPollingProvider } from "./alert-polling-provider";
 export { AnalyticsPollingProvider } from "./analytics-polling-provider";
 export { SignalPollingProvider } from "./signal-polling-provider";
+export { FlashProvider } from "./flash-provider";

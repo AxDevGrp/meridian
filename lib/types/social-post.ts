@@ -3,6 +3,8 @@
  * Covers X (Twitter), Truth Social, and WhiteHouse announcements
  */
 
+import type { MarketSector } from "@/lib/types/market";
+
 /**
  * Supported social media platforms
  */
@@ -12,6 +14,20 @@ export type SocialPlatform = "x" | "truth_social" | "whitehouse";
  * Sentiment analysis labels
  */
 export type SentimentLabel = "positive" | "negative" | "neutral" | "aggressive" | "urgent";
+
+/**
+ * Policy action type (for WH executive orders, sanctions, etc.)
+ */
+export type PolicyActionType =
+    | "tariff"
+    | "sanction"
+    | "executive_order"
+    | "treaty"
+    | "military"
+    | "regulation"
+    | "trade_deal"
+    | "press_briefing"
+    | "other";
 
 /**
  * Engagement metrics for a social post
@@ -56,6 +72,19 @@ export interface SocialPost {
     postedAt: string;
     /** Additional platform-specific metadata */
     metadata: Record<string, unknown>;
+
+    // === NLP Classification Fields (GPT-4o-mini enriched) ===
+
+    /** Market sectors this post is relevant to (GPT-4o-mini classified) */
+    sectors: MarketSector[];
+    /** Specific ticker symbols mentioned or implied */
+    impliedInstruments: string[];
+    /** Policy action type — primarily for WH announcements */
+    policyType: PolicyActionType | null;
+    /** Confidence that this post is market-moving (0.0–1.0) */
+    marketRelevance: number;
+    /** Whether NLP classification has been applied */
+    nlpClassified: boolean;
 }
 
 // === Helper Functions ===

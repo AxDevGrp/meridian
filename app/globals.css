@@ -129,6 +129,37 @@
   }
 }
 
+/* ==========================================
+ * FLASH Alert Animations
+ * ========================================== */
+
+/* Critical alert pulse — subtle red background throb */
+@keyframes flash-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.85; }
+}
+.animate-flash-pulse {
+  animation: flash-pulse 2s ease-in-out infinite;
+}
+
+/* Scanning line effect — horizontal sweep across the banner */
+@keyframes scan-line {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+.animate-scan-line {
+  animation: scan-line 3s linear infinite;
+}
+
+/* Flash entry — slide down from top */
+@keyframes flash-enter {
+  0% { transform: translateY(-100%); opacity: 0; }
+  100% { transform: translateY(0); opacity: 1; }
+}
+.animate-flash-enter {
+  animation: flash-enter 0.3s ease-out;
+}
+
 /* Meridian-specific base styles */
 html {
   scroll-behavior: smooth;

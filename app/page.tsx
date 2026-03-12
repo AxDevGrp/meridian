@@ -12,6 +12,7 @@ import { IntelPanel } from "@/components/intel";
 import { AlertPanel, AlertToastContainer } from "@/components/alerts";
 import { AnalyticsPanel } from "@/components/analytics";
 import { SignalWidget, SignalDetailPanel } from "@/components/signals";
+import { FlashBanner } from "@/components/flash";
 import { useAircraftStore } from "@/lib/stores/aircraft-store";
 import { useDataStore } from "@/lib/stores/data-store";
 import { useUIStore, useSidebarActions } from "@/lib/stores/ui-store";
@@ -90,6 +91,7 @@ function GlobeWithAllData() {
       <AlertToastContainer />
       <SignalWidget />
       <SignalDetailPanel />
+      <FlashBanner />
     </>
   );
 }

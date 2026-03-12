@@ -592,18 +592,68 @@ function evaluateMarketMove(condition: TriggerCondition, snapshot: AnomalyDataSn
     return absChange >= condition.threshold;
 }
 
+/**
+ * Platform authority weights for sentiment evaluation.
+ * White House executive orders carry 3× the weight of social posts.
+ */
+const PLATFORM_WEIGHT: Record<string, number> = {
+    whitehouse: 3.0,
+    truth_social: 2.0,
+    x: 1.0,
+};
+
 function evaluateSentimentShift(condition: TriggerCondition, snapshot: AnomalyDataSnapshot): boolean {
     const threshold = condition.threshold ?? -0.3;
     if (snapshot.socialPosts.length === 0) return false;
 
-    const scores = snapshot.socialPosts
-        .filter((p) => p.sentimentScore !== null)
-        .map((p) => p.sentimentScore as number);
+    // Filter posts relevant to this condition's region or topic
+    const relevantPosts = snapshot.socialPosts.filter((post) => {
+        if (post.sentimentScore === null) return false;
 
-    if (scores.length === 0) return false;
+        // Region-based filtering: check geoReferences against condition.region
+        if (condition.region) {
+            const regionLower = condition.region.toLowerCase();
+            const geoMatch = post.geoReferences.some((g) =>
+                g.toLowerCase().includes(regionLower),
+            );
+            const entityMatch = post.entitiesMentioned.some((e) =>
+                e.toLowerCase().includes(regionLower),
+            );
+            if (geoMatch || entityMatch) return true;
+        }
 
-    const avgSentiment = scores.reduce((sum, s) => sum + s, 0) / scores.length;
-    return avgSentiment < threshold;
+        // Sector-based filtering: use the NLP-classified sectors
+        if (post.sectors && post.sectors.length > 0) {
+            // Posts with classified sectors and high market relevance are always relevant
+            if (post.marketRelevance > 0.5) return true;
+        }
+
+        // If no region filter, include posts with market relevance > 0.3
+        if (!condition.region && post.marketRelevance > 0.3) return true;
+
+        // Fall back to including all scored posts if no filters matched
+        return !condition.region;
+    });
+
+    if (relevantPosts.length === 0) return false;
+
+    // Compute platform-weighted average sentiment
+    let weightedSum = 0;
+    let totalWeight = 0;
+
+    for (const post of relevantPosts) {
+        const platformW = PLATFORM_WEIGHT[post.platform] ?? 1.0;
+        const relevanceW = post.marketRelevance > 0 ? post.marketRelevance : 0.5;
+        const weight = platformW * relevanceW;
+
+        weightedSum += (post.sentimentScore as number) * weight;
+        totalWeight += weight;
+    }
+
+    if (totalWeight === 0) return false;
+
+    const weightedSentiment = weightedSum / totalWeight;
+    return weightedSentiment < threshold;
 }
 
 function evaluateConflictActive(condition: TriggerCondition, snapshot: AnomalyDataSnapshot): boolean {
